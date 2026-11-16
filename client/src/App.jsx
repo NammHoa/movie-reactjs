@@ -2,8 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import { AdminRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
-import Login from './pages/user/Login'
-import Register from './pages/user/Register'
+import Auth from './pages/user/Auth'
 import Dashboard from './pages/admin/Dashboard'
 
 export default function App() {
@@ -12,8 +11,9 @@ export default function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* Đăng nhập và đăng ký dùng chung một luồng */}
+        <Route path="/login" element={<Auth />} />
+        <Route path="/register" element={<Auth />} />
         <Route
           path="/admin"
           element={

@@ -12,6 +12,7 @@ app.use(morgan('dev'))
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 app.use('/api/auth', require('./routes/authRoutes'))
+app.use('/api/movies', require('./routes/movieRoutes'))
 
 app.use((req, res) => res.status(404).json({ message: 'Không tìm thấy API' }))
 
