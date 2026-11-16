@@ -3,7 +3,9 @@ import Navbar from './components/Navbar'
 import { AdminRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
 import Auth from './pages/user/Auth'
+import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
+import Movies from './pages/admin/Movies'
 
 export default function App() {
   return (
@@ -18,10 +20,13 @@ export default function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <Dashboard />
+              <AdminLayout />
             </AdminRoute>
           }
-        />
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="movies" element={<Movies />} />
+        </Route>
       </Routes>
     </>
   )
