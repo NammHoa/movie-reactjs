@@ -4,6 +4,7 @@ const Movie = require('../models/Movie')
 const Room = require('../models/Room')
 const { str, isId, wrap } = require('../utils/http')
 const { buildSeatMap } = require('../utils/seats')
+const { releaseExpired } = require('../services/bookingExpiry')
 
 const GAP_MS = 15 * 60 * 1000 // nghỉ 15 phút giữa 2 suất (dọn phòng)
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -58,6 +59,7 @@ exports.getOne = wrap(async (req, res) => {
 // GET /api/showtimes/:id/seats -> sơ đồ ghế và trạng thái từng ghế của suất chiếu
 exports.seats = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  await releaseExpired({ showtime: req.params.id })
   const st = await Showtime.findById(req.params.id).populate(POPULATE)
   if (!st || !st.room || !st.movie) return res.status(404).json(NOT_FOUND)
 

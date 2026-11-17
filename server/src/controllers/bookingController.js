@@ -3,6 +3,7 @@ const Booking = require('../models/Booking')
 const Showtime = require('../models/Showtime')
 const { isId, wrap } = require('../utils/http')
 const { isValidSeat } = require('../utils/seats')
+const { newExpiry, releaseExpired } = require('../services/bookingExpiry')
 
 const MAX_SEATS_PER_BOOKING = 8
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // bỏ các ký tự dễ nhầm: I, O, 0, 1
@@ -23,8 +24,9 @@ const POPULATE = {
 // chỉ hủy được đơn chưa thanh toán và suất chiếu chưa bắt đầu.
 const present = (booking) => {
   const obj = booking.toObject()
-  obj.canCancel =
-    booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > new Date()
+  const now = new Date()
+  obj.canCancel = booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > now
+  obj.canPay = booking.paymentStatus === 'pending' && !(booking.expiresAt <= now)
   return obj
 }
 
@@ -53,6 +55,8 @@ exports.create = wrap(async (req, res) => {
   }
   const invalid = seats.filter((s) => !isValidSeat(s, showtime.room.rows, showtime.room.seatsPerRow))
   if (invalid.length) return res.status(400).json({ message: `Ghế không tồn tại trong phòng: ${invalid.join(', ')}` })
+
+  await releaseExpired({ showtime: showtime._id })
 
   // Giữ ghế bằng MỘT lệnh nguyên tử: chỉ thành công nếu KHÔNG ghế nào trong danh sách đã có người đặt.
   // Hai người bấm cùng lúc thì database xử lý lần lượt, người đến sau sẽ nhận null (không bao giờ bán trùng).
@@ -84,6 +88,7 @@ exports.create = wrap(async (req, res) => {
           seats,
           pricePerSeat: showtime.price,
           totalPrice: showtime.price * seats.length,
+          expiresAt: newExpiry(),
         })
         break
       } catch (err) {
@@ -120,6 +125,7 @@ exports.cancel = wrap(async (req, res) => {
   if (!booking) return res.status(404).json(NOT_FOUND)
 
   if (booking.paymentStatus === 'cancelled') return res.status(409).json({ message: 'Vé này đã được hủy trước đó' })
+  if (booking.paymentStatus === 'expired') return res.status(409).json({ message: 'Đơn đã hết hạn thanh toán và được hủy tự động' })
   if (booking.paymentStatus === 'paid') {
     return res.status(409).json({ message: 'Vé đã thanh toán, không thể tự hủy. Vui lòng liên hệ rạp để được hỗ trợ.' })
   }

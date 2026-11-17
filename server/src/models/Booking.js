@@ -2,17 +2,20 @@ const mongoose = require('mongoose')
 
 const bookingSchema = new mongoose.Schema(
   {
-    code: { type: String, required: true, unique: true }, // mã đặt vé ngắn gọn (dùng cho vé / mã QR)
+    code: { type: String, required: true, unique: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     showtime: { type: mongoose.Schema.Types.ObjectId, ref: 'Showtime', required: true },
     seats: { type: [String], required: true },
-    pricePerSeat: { type: Number, required: true }, // lưu lại giá lúc đặt (admin đổi giá sau này không ảnh hưởng)
+    pricePerSeat: { type: Number, required: true },
     totalPrice: { type: Number, required: true },
-    paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
+    paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired'], default: 'pending' },
+    expiresAt: Date,
+    paidAt: Date,
   },
   { timestamps: true },
 )
 
 bookingSchema.index({ user: 1, createdAt: -1 })
+bookingSchema.index({ paymentStatus: 1, expiresAt: 1 })
 
 module.exports = mongoose.model('Booking', bookingSchema)

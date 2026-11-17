@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import api from '../../api/axios'
+import Countdown from '../../components/Countdown'
+import PayButton from '../../components/PayButton'
 import { useAuth } from '../../context/AuthContext'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
 const MAX_SEATS = 8
 
 function Seat({ seat, selected, disabled, onToggle }) {
-  const base = 'h-8 w-8 rounded-t-lg text-[11px] font-semibold transition sm:h-9 sm:w-9'
+  const base = 'h-[30px] w-[30px] rounded-t-lg text-[11px] font-semibold transition sm:h-9 sm:w-9'
   const style = seat.booked
     ? 'cursor-not-allowed bg-gray-300 text-gray-400'
     : selected
@@ -54,7 +56,8 @@ export default function Booking() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [booking, setBooking] = useState(null) // đơn vừa đặt thành công
+  const [booking, setBooking] = useState(null) // đơn vừa giữ ghế, chờ thanh toán
+  const [holdOver, setHoldOver] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -95,6 +98,7 @@ export default function Booking() {
     try {
       const res = await api.post('/bookings', { showtime: id, seats: selected })
       setBooking(res.data)
+      setHoldOver(false)
       setSelected([])
       load()
     } catch (err) {
@@ -129,7 +133,7 @@ export default function Booking() {
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="bg-green-600 px-6 py-5 text-center text-white">
             <p className="text-3xl">✓</p>
-            <h1 className="text-xl font-bold">Đặt vé thành công</h1>
+            <h1 className="text-xl font-bold">Đã giữ ghế cho bạn</h1>
           </div>
           <div className="space-y-4 p-6">
             <div className="text-center">
@@ -148,11 +152,26 @@ export default function Booking() {
               <dt className="text-gray-500">Tổng tiền</dt>
               <dd className="font-bold text-brand">{formatPrice(booking.totalPrice)}</dd>
               <dt className="text-gray-500">Trạng thái</dt>
-              <dd><span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Chờ thanh toán</span></dd>
+              <dd>
+                {holdOver ? (
+                  <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">Hết hạn thanh toán</span>
+                ) : (
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Chờ thanh toán</span>
+                )}
+              </dd>
             </dl>
-            <p className="rounded bg-gray-50 p-3 text-xs text-gray-500">
-              Ghế đã được giữ cho bạn. Chức năng thanh toán sẽ được bổ sung ở bước sau.
-            </p>
+            {holdOver ? (
+              <p className="rounded bg-red-50 p-3 text-center text-sm text-red-600">
+                Đã hết thời gian giữ ghế. Ghế đã được nhả, vui lòng đặt lại.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-center text-sm text-gray-600">
+                  Vui lòng thanh toán trong <Countdown expiresAt={booking.expiresAt} onExpire={() => setHoldOver(true)} />, sau đó ghế sẽ được nhả cho người khác.
+                </p>
+                <PayButton bookingId={booking._id}>Thanh toán {formatPrice(booking.totalPrice)}</PayButton>
+              </div>
+            )}
             <div className="flex gap-3">
               <button onClick={() => setBooking(null)} className="flex-1 rounded border border-gray-300 py-2.5 text-sm font-semibold hover:bg-gray-50">
                 Đặt thêm vé
@@ -176,7 +195,7 @@ export default function Booking() {
       <h1 className="mt-2 border-l-4 border-brand pl-3 text-2xl font-bold">Chọn ghế</h1>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
-        <section className="rounded-lg bg-white p-4 shadow-sm sm:p-6">
+        <section className="min-w-0 rounded-lg bg-white p-3 shadow-sm sm:p-6">
           {closed && (
             <p className="mb-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-700">Suất chiếu này đã bắt đầu, không thể đặt vé.</p>
           )}
@@ -185,14 +204,14 @@ export default function Booking() {
               <div className="mx-auto mb-1 h-2 w-3/4 rounded-t-full bg-gray-300" />
               <p className="mb-8 text-center text-xs font-semibold uppercase tracking-widest text-gray-400">Màn hình</p>
               {seatMap.map((row) => (
-                <div key={row.row} className="mb-2 flex items-center justify-center gap-2">
-                  <span className="w-5 text-center text-xs font-bold text-gray-400">{row.row}</span>
-                  <div className="flex gap-1.5">
+                <div key={row.row} className="mb-2 flex items-center justify-center gap-1.5 sm:gap-2">
+                  <span className="w-4 text-center text-xs font-bold text-gray-400 sm:w-5">{row.row}</span>
+                  <div className="flex gap-1 sm:gap-1.5">
                     {row.seats.map((seat) => (
                       <Seat key={seat.code} seat={seat} selected={selected.includes(seat.code)} disabled={closed} onToggle={toggle} />
                     ))}
                   </div>
-                  <span className="w-5 text-center text-xs font-bold text-gray-400">{row.row}</span>
+                  <span className="w-4 text-center text-xs font-bold text-gray-400 sm:w-5">{row.row}</span>
                 </div>
               ))}
             </div>
@@ -201,7 +220,7 @@ export default function Booking() {
           <p className="mt-4 text-center text-xs text-gray-400">Còn {available} ghế trống</p>
         </section>
 
-        <aside className="h-fit rounded-lg bg-white p-5 shadow-sm lg:sticky lg:top-4">
+        <aside className="h-fit min-w-0 rounded-lg bg-white p-5 shadow-sm lg:sticky lg:top-4">
           <h2 className="text-lg font-bold">{showtime.movie.title}</h2>
           <p className="mt-1 text-sm text-gray-500">{showtime.room.cinema.name} — {showtime.room.name}</p>
           <p className="text-sm text-gray-500">{formatDateTime(showtime.startTime)}</p>

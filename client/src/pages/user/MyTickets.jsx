@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/axios'
+import Countdown from '../../components/Countdown'
 import { Poster } from '../../components/MovieCard'
+import PayButton from '../../components/PayButton'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
 const TABS = [
@@ -9,9 +11,14 @@ const TABS = [
   { value: 'history', label: 'Lịch sử' },
 ]
 
+// Hết hạn giữ ghế: server đã đánh dấu 'expired', hoặc đã quá hạn nhưng chưa tới lượt dọn (mỗi 30s)
+const isLapsed = (b, now) =>
+  b.paymentStatus === 'expired' || (b.paymentStatus === 'pending' && new Date(b.expiresAt).getTime() <= now)
+
 function statusOf(b, now) {
   if (b.paymentStatus === 'cancelled') return { label: 'Đã hủy', cls: 'bg-gray-200 text-gray-600' }
   if (b.paymentStatus === 'paid') return { label: 'Đã thanh toán', cls: 'bg-green-100 text-green-700' }
+  if (isLapsed(b, now)) return { label: 'Hết hạn thanh toán', cls: 'bg-gray-200 text-gray-600' }
   if (!b.showtime || new Date(b.showtime.startTime).getTime() <= now) {
     return { label: 'Đã qua suất chiếu', cls: 'bg-gray-200 text-gray-600' }
   }
@@ -19,12 +26,13 @@ function statusOf(b, now) {
 }
 
 const isUpcoming = (b, now) =>
-  b.paymentStatus !== 'cancelled' && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
+  b.paymentStatus !== 'cancelled' && !isLapsed(b, now) && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
 
-function TicketCard({ booking, now, onCancel, busy }) {
+function TicketCard({ booking, now, onCancel, onExpire, busy }) {
   const { showtime } = booking
   const status = statusOf(booking, now)
   const cinema = showtime?.room?.cinema
+  const payable = booking.canPay && !isLapsed(booking, now)
 
   return (
     <article className="flex gap-4 rounded-lg bg-white p-4 shadow-sm">
@@ -46,22 +54,39 @@ function TicketCard({ booking, now, onCancel, busy }) {
           <dt className="text-gray-500">Mã vé</dt>
           <dd className="font-mono tracking-widest">{booking.code}</dd>
         </dl>
-        {booking.canCancel && (
-          <button
-            onClick={() => onCancel(booking)}
-            disabled={busy}
-            className="mt-3 rounded border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-          >
-            {busy ? 'Đang hủy...' : 'Hủy vé'}
-          </button>
+        {payable && (
+          <p className="mt-3 text-sm text-gray-600">
+            Thanh toán trong <Countdown expiresAt={booking.expiresAt} onExpire={onExpire} />
+          </p>
         )}
+        <div className="mt-3 flex flex-wrap items-start gap-2">
+          {payable && (
+            <PayButton bookingId={booking._id} className="h-9 text-sm">
+              Thanh toán
+            </PayButton>
+          )}
+          {booking.paymentStatus === 'paid' && (
+            <Link to={`/tickets/${booking._id}`} className="inline-flex h-9 items-center rounded bg-brand px-4 text-sm font-bold text-white transition hover:bg-brand-dark">
+              Xem vé điện tử
+            </Link>
+          )}
+          {booking.canCancel && !isLapsed(booking, now) && (
+            <button
+              onClick={() => onCancel(booking)}
+              disabled={busy}
+              className="h-9 rounded border border-red-300 px-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+            >
+              {busy ? 'Đang hủy...' : 'Hủy vé'}
+            </button>
+          )}
+        </div>
       </div>
     </article>
   )
 }
 
 export default function MyTickets() {
-  const [now] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now())
   const [bookings, setBookings] = useState(null)
   const [tab, setTab] = useState('upcoming')
   const [error, setError] = useState('')
@@ -129,7 +154,7 @@ export default function MyTickets() {
 
       <div className="space-y-4">
         {shown.map((b) => (
-          <TicketCard key={b._id} booking={b} now={now} onCancel={cancel} busy={busyId === b._id} />
+          <TicketCard key={b._id} booking={b} now={now} onCancel={cancel} onExpire={() => setNow(Date.now())} busy={busyId === b._id} />
         ))}
       </div>
     </div>
