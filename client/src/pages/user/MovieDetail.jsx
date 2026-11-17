@@ -102,14 +102,15 @@ export default function MovieDetail() {
                   <p className="mb-3 text-sm text-gray-500">{[cinema.address, cinema.city].filter(Boolean).join(', ')}</p>
                   <div className="flex flex-wrap gap-3">
                     {items.map((s) => (
-                      <div
+                      <Link
                         key={s._id}
-                        className="rounded border border-gray-300 px-4 py-2 text-center"
+                        to={`/booking/${s._id}`}
+                        className="rounded border border-gray-300 px-4 py-2 text-center transition hover:border-brand hover:text-brand"
                         title={`${s.room?.name} • ${s.room?.rows * s.room?.seatsPerRow} ghế`}
                       >
                         <p className="font-bold">{formatTime(s.startTime)}</p>
                         <p className="text-xs text-gray-500">{s.room?.name} • {formatPrice(s.price)}</p>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>

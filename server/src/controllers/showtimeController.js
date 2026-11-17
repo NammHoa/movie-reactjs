@@ -1,7 +1,9 @@
 const Showtime = require('../models/Showtime')
+const Booking = require('../models/Booking')
 const Movie = require('../models/Movie')
 const Room = require('../models/Room')
 const { str, isId, wrap } = require('../utils/http')
+const { buildSeatMap } = require('../utils/seats')
 
 const GAP_MS = 15 * 60 * 1000 // nghỉ 15 phút giữa 2 suất (dọn phòng)
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -51,6 +53,31 @@ exports.getOne = wrap(async (req, res) => {
   const st = await Showtime.findById(req.params.id).populate(POPULATE)
   if (!st) return res.status(404).json(NOT_FOUND)
   res.json(st)
+})
+
+// GET /api/showtimes/:id/seats -> sơ đồ ghế và trạng thái từng ghế của suất chiếu
+exports.seats = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const st = await Showtime.findById(req.params.id).populate(POPULATE)
+  if (!st || !st.room || !st.movie) return res.status(404).json(NOT_FOUND)
+
+  const { rows, seatsPerRow } = st.room
+  const total = rows * seatsPerRow
+  res.json({
+    showtime: {
+      _id: st._id,
+      movie: { _id: st.movie._id, title: st.movie.title, poster: st.movie.poster, duration: st.movie.duration },
+      room: { _id: st.room._id, name: st.room.name, cinema: st.room.cinema },
+      startTime: st.startTime,
+      endTime: st.endTime,
+      price: st.price,
+    },
+    closed: st.startTime <= new Date(), // suất đã bắt đầu: không đặt vé được nữa
+    total,
+    booked: st.bookedSeats.length,
+    available: total - st.bookedSeats.length,
+    seatMap: buildSeatMap(rows, seatsPerRow, st.bookedSeats),
+  })
 })
 
 // Trả về lỗi (chuỗi) nếu trùng lịch với suất khác trong cùng phòng
@@ -138,6 +165,10 @@ exports.remove = wrap(async (req, res) => {
   if (!st) return res.status(404).json(NOT_FOUND)
   if (st.bookedSeats.length > 0) {
     return res.status(409).json({ message: 'Suất chiếu đã có người đặt vé, không thể xóa' })
+  }
+  // Còn lịch sử đơn (kể cả đơn đã hủy) thì giữ lại suất chiếu để "Vé của tôi" vẫn hiển thị được
+  if (await Booking.exists({ showtime: st._id })) {
+    return res.status(409).json({ message: 'Suất chiếu đã có đơn đặt vé (kể cả đơn đã hủy), không thể xóa' })
   }
   await st.deleteOne()
   res.json({ message: 'Đã xóa suất chiếu' })

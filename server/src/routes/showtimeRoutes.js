@@ -3,6 +3,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth')
 const c = require('../controllers/showtimeController')
 
 router.get('/', c.list)
+router.get('/:id/seats', c.seats)
 router.get('/:id', c.getOne)
 
 router.post('/', verifyToken, isAdmin, c.create)
