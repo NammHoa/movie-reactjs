@@ -6,31 +6,31 @@ export default function Navbar() {
 
   return (
     <header className="border-b border-gray-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="text-2xl font-extrabold tracking-tight text-brand">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:py-3">
+        <Link to="/" className="shrink-0 text-lg font-extrabold tracking-tight text-brand sm:text-2xl">
           MOVIE<span className="text-gray-800">BOOKING</span>
         </Link>
-        <nav className="flex items-center gap-5 text-sm font-medium">
+        <nav className="flex items-center gap-3 whitespace-nowrap text-xs font-medium sm:gap-5 sm:text-sm">
           {user?.role === 'admin' && (
-            <Link to="/admin" className="hover:text-brand">Quản trị</Link>
+            <Link to="/admin" className="py-2 hover:text-brand">Quản trị</Link>
           )}
           {user ? (
             <>
               <span className="hidden text-gray-500 sm:inline">Xin chào, {user.name}</span>
-              <Link to="/my-tickets" className="hover:text-brand">Vé của tôi</Link>
+              <Link to="/my-tickets" className="py-2 hover:text-brand">Vé của tôi</Link>
               <button
                 onClick={logout}
-                className="rounded border border-brand px-3 py-1.5 text-brand transition hover:bg-brand hover:text-white"
+                className="rounded border border-brand px-2.5 py-2 text-brand transition hover:bg-brand hover:text-white sm:px-3 sm:py-1.5"
               >
                 Đăng xuất
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="hover:text-brand">Đăng nhập</Link>
+              <Link to="/login" className="py-2 hover:text-brand">Đăng nhập</Link>
               <Link
                 to="/register"
-                className="rounded bg-brand px-4 py-1.5 text-white transition hover:bg-brand-dark"
+                className="rounded bg-brand px-3 py-2 text-white transition hover:bg-brand-dark sm:px-4 sm:py-1.5"
               >
                 Đăng ký
               </Link>
