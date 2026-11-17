@@ -11,6 +11,9 @@ import Showtimes from './pages/admin/Showtimes'
 import MovieDetail from './pages/user/MovieDetail'
 import Booking from './pages/user/Booking'
 import MyTickets from './pages/user/MyTickets'
+import Pay from './pages/user/Pay'
+import Ticket from './pages/user/Ticket'
+import PaymentResult from './pages/user/PaymentResult'
 
 export default function App() {
   return (
@@ -25,6 +28,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MyTickets />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tickets/:id"
+          element={
+            <ProtectedRoute>
+              <Ticket />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pay/:id"
+          element={
+            <ProtectedRoute>
+              <Pay />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payment/result/:id"
+          element={
+            <ProtectedRoute>
+              <PaymentResult />
             </ProtectedRoute>
           }
         />
