@@ -17,5 +17,6 @@ const bookingSchema = new mongoose.Schema(
 
 bookingSchema.index({ user: 1, createdAt: -1 })
 bookingSchema.index({ paymentStatus: 1, expiresAt: 1 })
+bookingSchema.index({ paymentStatus: 1, paidAt: 1 }) // thống kê doanh thu theo ngày thanh toán
 
 module.exports = mongoose.model('Booking', bookingSchema)
