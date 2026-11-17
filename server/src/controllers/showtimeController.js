@@ -1,4 +1,5 @@
 const Showtime = require('../models/Showtime')
+const Booking = require('../models/Booking')
 const Movie = require('../models/Movie')
 const Room = require('../models/Room')
 const { str, isId, wrap } = require('../utils/http')
@@ -164,6 +165,10 @@ exports.remove = wrap(async (req, res) => {
   if (!st) return res.status(404).json(NOT_FOUND)
   if (st.bookedSeats.length > 0) {
     return res.status(409).json({ message: 'Suất chiếu đã có người đặt vé, không thể xóa' })
+  }
+  // Còn lịch sử đơn (kể cả đơn đã hủy) thì giữ lại suất chiếu để "Vé của tôi" vẫn hiển thị được
+  if (await Booking.exists({ showtime: st._id })) {
+    return res.status(409).json({ message: 'Suất chiếu đã có đơn đặt vé (kể cả đơn đã hủy), không thể xóa' })
   }
   await st.deleteOne()
   res.json({ message: 'Đã xóa suất chiếu' })

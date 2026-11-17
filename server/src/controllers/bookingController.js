@@ -19,6 +19,17 @@ const POPULATE = {
   ],
 }
 
+// Thêm cờ canCancel để giao diện không phải tự suy luận quy tắc:
+// chỉ hủy được đơn chưa thanh toán và suất chiếu chưa bắt đầu.
+const present = (booking) => {
+  const obj = booking.toObject()
+  obj.canCancel =
+    booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > new Date()
+  return obj
+}
+
+const NOT_FOUND = { message: 'Không tìm thấy vé' }
+
 // Chuẩn hóa danh sách ghế từ client: mảng chuỗi, viết hoa, không trùng, tối đa 8 ghế.
 function parseSeats(input) {
   if (!Array.isArray(input) || input.length === 0) return { error: 'Vui lòng chọn ít nhất một ghế' }
@@ -85,4 +96,46 @@ exports.create = wrap(async (req, res) => {
     await Showtime.updateOne({ _id: showtime._id }, { $pull: { bookedSeats: { $in: seats } } })
     throw err
   }
+})
+
+// GET /api/bookings/mine -> vé của tôi (mới nhất trước)
+exports.mine = wrap(async (req, res) => {
+  const bookings = await Booking.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(100).populate(POPULATE)
+  res.json(bookings.map(present))
+})
+
+// GET /api/bookings/:id -> chi tiết một vé (chủ vé hoặc admin; người khác thấy như "không tồn tại")
+exports.getOne = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const booking = await Booking.findById(req.params.id).populate(POPULATE)
+  if (!booking) return res.status(404).json(NOT_FOUND)
+  if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(404).json(NOT_FOUND)
+  res.json(present(booking))
+})
+
+// POST /api/bookings/:id/cancel -> hủy vé và nhả ghế
+exports.cancel = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const booking = await Booking.findOne({ _id: req.params.id, user: req.user.id }).populate('showtime', 'startTime')
+  if (!booking) return res.status(404).json(NOT_FOUND)
+
+  if (booking.paymentStatus === 'cancelled') return res.status(409).json({ message: 'Vé này đã được hủy trước đó' })
+  if (booking.paymentStatus === 'paid') {
+    return res.status(409).json({ message: 'Vé đã thanh toán, không thể tự hủy. Vui lòng liên hệ rạp để được hỗ trợ.' })
+  }
+  if (!booking.showtime || booking.showtime.startTime <= new Date()) {
+    return res.status(409).json({ message: 'Suất chiếu đã bắt đầu, không thể hủy vé' })
+  }
+
+  // Chuyển trạng thái pending -> cancelled bằng MỘT lệnh nguyên tử: nếu nhiều request hủy cùng lúc
+  // thì chỉ MỘT request thắng và được phép nhả ghế (tránh nhả nhầm ghế đã được người khác đặt lại).
+  const cancelled = await Booking.findOneAndUpdate(
+    { _id: booking._id, paymentStatus: 'pending' },
+    { paymentStatus: 'cancelled' },
+    { new: true },
+  )
+  if (!cancelled) return res.status(409).json({ message: 'Không thể hủy vé này (trạng thái đã thay đổi)' })
+
+  await Showtime.updateOne({ _id: booking.showtime._id }, { $pull: { bookedSeats: { $in: booking.seats } } })
+  res.json(present(await cancelled.populate(POPULATE)))
 })
