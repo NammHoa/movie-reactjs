@@ -15,4 +15,13 @@ function buildSeatMap(rows, seatsPerRow, bookedSeats = []) {
   }))
 }
 
-module.exports = { rowLabel, buildSeatMap }
+// Mã ghế có nằm trong sơ đồ của phòng không? ("A1" hợp lệ với phòng 8x10, "A11" hay "Z1" thì không)
+function isValidSeat(code, rows, seatsPerRow) {
+  const m = /^([A-Z])([1-9]\d?)$/.exec(code)
+  if (!m) return false
+  const row = m[1].charCodeAt(0) - 65
+  const number = Number(m[2])
+  return row < rows && number <= seatsPerRow
+}
+
+module.exports = { rowLabel, buildSeatMap, isValidSeat }

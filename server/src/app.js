@@ -16,6 +16,7 @@ app.use('/api/movies', require('./routes/movieRoutes'))
 app.use('/api/cinemas', require('./routes/cinemaRoutes'))
 app.use('/api/rooms', require('./routes/roomRoutes'))
 app.use('/api/showtimes', require('./routes/showtimeRoutes'))
+app.use('/api/bookings', require('./routes/bookingRoutes'))
 
 app.use((req, res) => res.status(404).json({ message: 'Không tìm thấy API' }))
 
