@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const { apiLimiter } = require('./middleware/rateLimit')
@@ -10,8 +11,9 @@ const app = express()
 // Đặt TRUST_PROXY=1 (số proxy đứng trước server) để lấy đúng IP thật; để trống khi chạy local.
 if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY))
 
+app.use(helmet())
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }))
-app.use(express.json())
+app.use(express.json({ limit: '20kb' }))
 app.use(cookieParser())
 app.use(morgan('dev'))
 
