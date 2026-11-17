@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import BookingSummary from '../../components/BookingSummary'
 import Countdown from '../../components/Countdown'
+import { errorMessage } from '../../lib/errors'
 import { formatPrice } from '../../lib/movie'
 import { loadPayment } from '../../lib/payment'
 
@@ -53,7 +54,7 @@ export default function Pay() {
     } catch (err) {
       // 409: đơn không còn thanh toán được (hết hạn, đã hủy...) -> trang kết quả sẽ giải thích
       if (err.response?.status === 409) return navigate(resultPath, { replace: true })
-      setError(err.response?.data?.message || 'Không thể xử lý thanh toán')
+      setError(errorMessage(err, 'Không thể xử lý thanh toán'))
       setBusy('')
     }
   }

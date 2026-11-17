@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatCountdown } from '../lib/errors'
 
 // Khung nền kem + thẻ trắng bo góc
 export function AuthShell({ children }) {
@@ -154,6 +155,17 @@ export function PrimaryButton({ loading, disabled, children, ...props }) {
     >
       {loading ? 'Đang xử lý...' : children}
     </button>
+  )
+}
+
+// Hiện khi bị giới hạn: số giây đếm ngược để aria-hidden, tránh trình đọc màn hình đọc lại mỗi giây
+export function RateLimitNotice({ secondsLeft }) {
+  if (!secondsLeft) return null
+  return (
+    <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+      Bạn thao tác quá nhanh hoặc nhập sai quá nhiều lần. Vui lòng thử lại sau{' '}
+      <b aria-hidden="true" className="font-mono">{formatCountdown(secondsLeft)}</b>.
+    </p>
   )
 }
 

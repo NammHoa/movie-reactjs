@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { RATE_LIMIT_EVENT } from '../lib/errors'
 
 const api = axios.create({
   baseURL: '/api',
@@ -19,6 +20,11 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     const url = error.config?.url || ''
+    // Tải dữ liệu bị giới hạn: báo bằng thông báo nổi vì trang chỉ hiện lỗi chung. Form đăng nhập/đăng ký và
+    // các thao tác gửi dữ liệu tự hiện thông báo tại chỗ nên không bắn thêm để khỏi trùng.
+    if (error.response?.status === 429 && error.config?.method === 'get') {
+      window.dispatchEvent(new CustomEvent(RATE_LIMIT_EVENT, { detail: { message: error.response.data?.message } }))
+    }
     if (error.response?.status === 401 && localStorage.getItem('token') && !AUTH_FORM_URL.test(url)) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
