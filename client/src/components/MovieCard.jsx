@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { STATUS_LABELS } from '../lib/movie'
 
 export function Poster({ src, alt, className = '' }) {
@@ -15,7 +16,10 @@ export function Poster({ src, alt, className = '' }) {
 
 export default function MovieCard({ movie }) {
   return (
-    <div className="group overflow-hidden rounded-lg bg-white shadow-sm transition hover:shadow-md">
+    <Link
+      to={`/movies/${movie._id}`}
+      className="group block overflow-hidden rounded-lg bg-white shadow-sm transition hover:shadow-md"
+    >
       <div className="relative">
         <Poster src={movie.poster} alt={movie.title} className="aspect-[2/3] w-full" />
         <span className="absolute left-2 top-2 rounded bg-brand px-2 py-0.5 text-xs font-semibold text-white">
@@ -30,6 +34,6 @@ export default function MovieCard({ movie }) {
           {movie.duration} phút{movie.genres?.length ? ` • ${movie.genres.join(', ')}` : ''}
         </p>
       </div>
-    </div>
+    </Link>
   )
 }
