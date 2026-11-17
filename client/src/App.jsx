@@ -6,6 +6,9 @@ import Auth from './pages/user/Auth'
 import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
 import Movies from './pages/admin/Movies'
+import Cinemas from './pages/admin/Cinemas'
+import Showtimes from './pages/admin/Showtimes'
+import MovieDetail from './pages/user/MovieDetail'
 
 export default function App() {
   return (
@@ -13,6 +16,7 @@ export default function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/movies/:id" element={<MovieDetail />} />
         {/* Đăng nhập và đăng ký dùng chung một luồng */}
         <Route path="/login" element={<Auth />} />
         <Route path="/register" element={<Auth />} />
@@ -26,6 +30,8 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="movies" element={<Movies />} />
+          <Route path="cinemas" element={<Cinemas />} />
+          <Route path="showtimes" element={<Showtimes />} />
         </Route>
       </Routes>
     </>
