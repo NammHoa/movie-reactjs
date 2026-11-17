@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 import {
@@ -26,6 +26,7 @@ const emptyReg = {
 export default function Auth() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [step, setStep] = useState('identify')
   const [identifier, setIdentifier] = useState('')
@@ -79,7 +80,10 @@ export default function Auth() {
 
   const finish = (data) => {
     login(data.user, data.token)
-    navigate(data.user.role === 'admin' ? '/admin' : '/')
+    // Quay lại trang đang xem dở (vd. trang chọn ghế) nếu có, chỉ nhận đường dẫn nội bộ
+    const from = location.state?.from
+    const back = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : null
+    navigate(back ?? (data.user.role === 'admin' ? '/admin' : '/'))
   }
 
   const apiError = (err) => err.response?.data?.message || 'Không thể kết nối tới máy chủ'
