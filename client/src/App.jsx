@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
-import { AdminRoute } from './routes/ProtectedRoute'
+import { AdminRoute, ProtectedRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
 import Auth from './pages/user/Auth'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -10,6 +10,7 @@ import Cinemas from './pages/admin/Cinemas'
 import Showtimes from './pages/admin/Showtimes'
 import MovieDetail from './pages/user/MovieDetail'
 import Booking from './pages/user/Booking'
+import MyTickets from './pages/user/MyTickets'
 
 export default function App() {
   return (
@@ -19,6 +20,14 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/movies/:id" element={<MovieDetail />} />
         <Route path="/booking/:id" element={<Booking />} />
+        <Route
+          path="/my-tickets"
+          element={
+            <ProtectedRoute>
+              <MyTickets />
+            </ProtectedRoute>
+          }
+        />
         {/* Đăng nhập và đăng ký dùng chung một luồng */}
         <Route path="/login" element={<Auth />} />
         <Route path="/register" element={<Auth />} />

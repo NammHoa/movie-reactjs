@@ -157,8 +157,8 @@ export default function Booking() {
               <button onClick={() => setBooking(null)} className="flex-1 rounded border border-gray-300 py-2.5 text-sm font-semibold hover:bg-gray-50">
                 Đặt thêm vé
               </button>
-              <Link to="/" className="flex-1 rounded bg-brand py-2.5 text-center text-sm font-bold text-white hover:bg-brand-dark">
-                Về trang chủ
+              <Link to="/my-tickets" className="flex-1 rounded bg-brand py-2.5 text-center text-sm font-bold text-white hover:bg-brand-dark">
+                Xem vé của tôi
               </Link>
             </div>
           </div>
