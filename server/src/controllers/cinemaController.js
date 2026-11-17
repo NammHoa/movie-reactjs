@@ -30,7 +30,7 @@ exports.update = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const { data, error } = clean(req.body, true)
   if (error) return res.status(400).json({ message: error })
-  const cinema = await Cinema.findByIdAndUpdate(req.params.id, data, { new: true })
+  const cinema = await Cinema.findByIdAndUpdate(req.params.id, data, { returnDocument: 'after' })
   if (!cinema) return res.status(404).json(NOT_FOUND)
   res.json(cinema)
 })

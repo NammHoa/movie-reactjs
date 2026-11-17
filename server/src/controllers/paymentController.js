@@ -66,7 +66,7 @@ exports.mockConfirm = wrap(async (req, res) => {
   if (!payment) return res.status(404).json(NOT_FOUND)
 
   if (req.body.result === 'failed') {
-    const failed = await Payment.findOneAndUpdate({ _id: payment._id, status: 'pending' }, { status: 'failed', failReason: 'declined' }, { new: true })
+    const failed = await Payment.findOneAndUpdate({ _id: payment._id, status: 'pending' }, { status: 'failed', failReason: 'declined' }, { returnDocument: 'after' })
     const current = failed || (await Payment.findById(payment._id))
     return res.json(present(current, await Booking.findById(payment.booking)))
   }
@@ -89,7 +89,7 @@ exports.mockConfirm = wrap(async (req, res) => {
   const paid = await Booking.findOneAndUpdate(
     { _id: payment.booking, paymentStatus: 'pending', $or: [{ expiresAt: { $gt: now } }, { expiresAt: { $exists: false } }] },
     { paymentStatus: 'paid', paidAt: now },
-    { new: true },
+    { returnDocument: 'after' },
   )
   if (!paid) {
     // Với cổng thật: tiền đã bị trừ mà đơn không còn hợp lệ -> phải hoàn tiền (ghi nhận ở đây).
@@ -99,6 +99,6 @@ exports.mockConfirm = wrap(async (req, res) => {
     return res.status(409).json({ message: notPayableMessage(booking) })
   }
 
-  const done = await Payment.findOneAndUpdate({ _id: payment._id }, { status: 'success', paidAt: now }, { new: true })
+  const done = await Payment.findOneAndUpdate({ _id: payment._id }, { status: 'success', paidAt: now }, { returnDocument: 'after' })
   res.json(present(done, paid))
 })

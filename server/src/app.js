@@ -29,5 +29,6 @@ app.use('/api/bookings', require('./routes/bookingRoutes'))
 app.use('/api/payments', require('./routes/paymentRoutes'))
 
 app.use((req, res) => res.status(404).json({ message: 'Không tìm thấy API' }))
+app.use(require('./middleware/errorHandler'))
 
 module.exports = app

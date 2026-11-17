@@ -73,7 +73,7 @@ exports.create = wrap(async (req, res) => {
   const held = await Showtime.findOneAndUpdate(
     { _id: showtime._id, startTime: { $gt: new Date() }, bookedSeats: { $nin: seats } },
     { $push: { bookedSeats: { $each: seats } } },
-    { new: true },
+    { returnDocument: 'after' },
   )
   if (!held) {
     const fresh = await Showtime.findById(showtime._id).select('bookedSeats')
@@ -148,7 +148,7 @@ exports.cancel = wrap(async (req, res) => {
   const cancelled = await Booking.findOneAndUpdate(
     { _id: booking._id, paymentStatus: 'pending' },
     { paymentStatus: 'cancelled' },
-    { new: true },
+    { returnDocument: 'after' },
   )
   if (!cancelled) return res.status(409).json({ message: 'Không thể hủy vé này (trạng thái đã thay đổi)' })
 

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const Movie = require('../models/Movie')
 const Showtime = require('../models/Showtime')
+const { serverError } = require('../utils/http')
 
 const STATUSES = ['now_showing', 'coming_soon', 'ended']
 const URL_RE = /^https?:\/\//i
@@ -62,7 +63,7 @@ exports.list = async (req, res) => {
     const movies = await Movie.find(filter).sort({ releaseDate: -1, createdAt: -1 }).limit(200)
     res.json(movies)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -73,7 +74,7 @@ exports.getOne = async (req, res) => {
     if (!movie) return res.status(404).json({ message: 'Không tìm thấy phim' })
     res.json(movie)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -83,7 +84,7 @@ exports.create = async (req, res) => {
     if (error) return res.status(400).json({ message: error })
     res.status(201).json(await Movie.create(data))
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -92,11 +93,11 @@ exports.update = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy phim' })
     const { data, error } = clean(req.body, true)
     if (error) return res.status(400).json({ message: error })
-    const movie = await Movie.findByIdAndUpdate(req.params.id, data, { new: true })
+    const movie = await Movie.findByIdAndUpdate(req.params.id, data, { returnDocument: 'after' })
     if (!movie) return res.status(404).json({ message: 'Không tìm thấy phim' })
     res.json(movie)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -110,6 +111,6 @@ exports.remove = async (req, res) => {
     if (!movie) return res.status(404).json({ message: 'Không tìm thấy phim' })
     res.json({ message: 'Đã xóa phim' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
