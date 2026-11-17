@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const Movie = require('../models/Movie')
+const Showtime = require('../models/Showtime')
 
 const STATUSES = ['now_showing', 'coming_soon', 'ended']
 const URL_RE = /^https?:\/\//i
@@ -102,6 +103,9 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Không tìm thấy phim' })
+    if (await Showtime.exists({ movie: req.params.id })) {
+      return res.status(409).json({ message: 'Phim đang có suất chiếu, hãy xóa các suất chiếu trước' })
+    }
     const movie = await Movie.findByIdAndDelete(req.params.id)
     if (!movie) return res.status(404).json({ message: 'Không tìm thấy phim' })
     res.json({ message: 'Đã xóa phim' })
