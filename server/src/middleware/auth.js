@@ -1,15 +1,33 @@
 const jwt = require('jsonwebtoken')
+const mongoose = require('mongoose')
+const User = require('../models/User')
 
-const verifyToken = (req, res, next) => {
+// Xác thực token, rồi đọc lại tài khoản từ database mỗi lần gọi API.
+// Nhờ vậy khi đổi quyền hoặc xóa tài khoản, thay đổi có hiệu lực ngay
+// (không phải đợi token cũ hết hạn).
+const verifyToken = async (req, res, next) => {
   const header = req.headers.authorization
   const token = header && header.startsWith('Bearer ') ? header.split(' ')[1] : null
   if (!token) return res.status(401).json({ message: 'Chưa đăng nhập' })
 
+  let payload
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET)
-    next()
+    payload = jwt.verify(token, process.env.JWT_SECRET)
   } catch {
-    res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+    return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+  }
+  if (!mongoose.isValidObjectId(payload.id)) {
+    return res.status(401).json({ message: 'Token không hợp lệ' })
+  }
+
+  try {
+    const account = await User.findById(payload.id).select('-password')
+    if (!account) return res.status(401).json({ message: 'Tài khoản không còn tồn tại' })
+    req.account = account // toàn bộ thông tin tài khoản (không có mật khẩu)
+    req.user = { id: account._id.toString(), role: account.role } // role lấy từ database
+    next()
+  } catch (err) {
+    res.status(500).json({ message: err.message })
   }
 }
 

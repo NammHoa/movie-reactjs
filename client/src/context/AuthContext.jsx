@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import api from '../api/axios'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +11,19 @@ export function AuthProvider({ children }) {
       return null
     }
   })
+
+  // Mỗi lần mở trang: hỏi server tài khoản hiện tại để cập nhật lại role.
+  // (Nếu token hết hạn / tài khoản bị xóa, interceptor trong api/axios.js sẽ tự đăng xuất.)
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return
+    api
+      .get('/auth/me')
+      .then(({ data }) => {
+        localStorage.setItem('user', JSON.stringify(data.user))
+        setUser(data.user)
+      })
+      .catch(() => {})
+  }, [])
 
   const login = (userData, token) => {
     localStorage.setItem('token', token)

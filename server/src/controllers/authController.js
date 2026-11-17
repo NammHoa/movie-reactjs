@@ -42,6 +42,11 @@ const publicUser = (u) => ({
 const findByIdentifier = (id) =>
   User.findOne(id.type === 'email' ? { email: id.value } : { phone: id.value })
 
+// Thông tin tài khoản hiện tại (dùng để client đồng bộ lại role sau khi đổi quyền)
+exports.me = (req, res) => {
+  res.json({ user: publicUser(req.account) })
+}
+
 // Bước 1: kiểm tra SĐT/Email đã có tài khoản chưa
 exports.check = async (req, res) => {
   try {
