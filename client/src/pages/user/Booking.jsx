@@ -4,6 +4,7 @@ import api from '../../api/axios'
 import Countdown from '../../components/Countdown'
 import PayButton from '../../components/PayButton'
 import { useAuth } from '../../context/AuthContext'
+import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
 const MAX_SEATS = 8
@@ -103,7 +104,7 @@ export default function Booking() {
       load()
     } catch (err) {
       const body = err.response?.data
-      setError(body?.message || 'Không thể đặt vé, vui lòng thử lại')
+      setError(errorMessage(err, 'Không thể đặt vé, vui lòng thử lại'))
       if (err.response?.status === 409) {
         // Có người nhanh tay hơn: cập nhật sơ đồ và bỏ các ghế vừa hết
         await load()

@@ -10,8 +10,11 @@ import {
   PasswordRules,
   PrimaryButton,
   RadioGroup,
+  RateLimitNotice,
   SelectField,
 } from '../../components/AuthUI'
+import { errorMessage, formatCountdown, isRateLimited, retryAfterOf } from '../../lib/errors'
+import { useCooldown } from '../../lib/useCooldown'
 import { PASSWORD_RULES, PHONE_RE, EMAIL_RE, isPasswordValid, normalizePhone, parseIdentifier } from '../../lib/validators'
 
 const GEO_API = 'https://provinces.open-api.vn/api/v1'
@@ -37,6 +40,9 @@ export default function Auth() {
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+  const cooldown = useCooldown()
+  const blocked = cooldown.secondsLeft > 0
+  const waitLabel = (label) => (blocked ? `Thử lại sau ${formatCountdown(cooldown.secondsLeft)}` : label)
 
   // Tỉnh / quận lấy từ API công khai; nếu lỗi thì cho nhập tay
   const [provinces, setProvinces] = useState(null)
@@ -69,6 +75,7 @@ export default function Auth() {
     setErrors({})
     setFormError('')
     setNotice('')
+    cooldown.clear()
     setStep(next)
   }
 
@@ -86,7 +93,15 @@ export default function Auth() {
     navigate(back ?? (data.user.role === 'admin' ? '/admin' : '/'))
   }
 
-  const apiError = (err) => err.response?.data?.message || 'Không thể kết nối tới máy chủ'
+  // Bị giới hạn thì hiện đếm ngược và khóa nút gửi cho đến khi hết thời gian chờ; lỗi khác hiện câu của server
+  const handleError = (err) => {
+    if (isRateLimited(err)) {
+      setFormError('')
+      cooldown.start(retryAfterOf(err) || 60)
+    } else {
+      setFormError(errorMessage(err))
+    }
+  }
 
   // ---- Bước 1: nhập SĐT / Email ----
   const submitIdentify = async (e) => {
@@ -111,7 +126,7 @@ export default function Auth() {
         goto('register1')
       }
     } catch (err) {
-      setFormError(apiError(err))
+      handleError(err)
     } finally {
       setLoading(false)
     }
@@ -128,7 +143,7 @@ export default function Auth() {
       const { data } = await api.post('/auth/login', { identifier: account.value, password })
       finish(data)
     } catch (err) {
-      setFormError(apiError(err))
+      handleError(err)
     } finally {
       setLoading(false)
     }
@@ -165,7 +180,7 @@ export default function Auth() {
       })
       finish(data)
     } catch (err) {
-      setFormError(apiError(err))
+      handleError(err)
     } finally {
       setLoading(false)
     }
@@ -192,8 +207,9 @@ export default function Auth() {
             autoFocus
           />
           <FormError message={formError} />
-          <PrimaryButton disabled={!identifier.trim()} loading={loading}>
-            Tiếp tục
+          <RateLimitNotice secondsLeft={cooldown.secondsLeft} />
+          <PrimaryButton disabled={!identifier.trim() || blocked} loading={loading}>
+            {waitLabel('Tiếp tục')}
           </PrimaryButton>
         </form>
       </AuthShell>
@@ -223,7 +239,8 @@ export default function Auth() {
             autoFocus
           />
           <FormError message={formError} />
-          <PrimaryButton loading={loading}>Đăng nhập</PrimaryButton>
+          <RateLimitNotice secondsLeft={cooldown.secondsLeft} />
+          <PrimaryButton disabled={blocked} loading={loading}>{waitLabel('Đăng nhập')}</PrimaryButton>
           <div className="flex justify-between pt-8 text-sm">
             <button type="button" onClick={() => setNotice('Tính năng quên mật khẩu đang được phát triển')} className="underline">
               Quên mật khẩu
@@ -306,8 +323,9 @@ export default function Auth() {
         <Field label="Địa chỉ" value={reg.address} onChange={setRegField('address')} autoComplete="street-address" />
 
         <FormError message={formError} />
-        <PrimaryButton disabled={!filled2} loading={loading}>
-          Hoàn tất đăng ký
+        <RateLimitNotice secondsLeft={cooldown.secondsLeft} />
+        <PrimaryButton disabled={!filled2 || blocked} loading={loading}>
+          {waitLabel('Hoàn tất đăng ký')}
         </PrimaryButton>
       </form>
     </AuthShell>

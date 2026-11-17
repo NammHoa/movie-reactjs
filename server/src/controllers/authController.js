@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+const { serverError } = require('../utils/http')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^0\d{9}$/
@@ -55,7 +56,7 @@ exports.check = async (req, res) => {
     const exists = !!(await findByIdentifier(id))
     res.json({ exists, type: id.type, value: id.value })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -98,7 +99,7 @@ exports.register = async (req, res) => {
     res.status(201).json({ user: publicUser(user), token: signToken(user) })
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ message: 'Email hoặc số điện thoại đã được sử dụng' })
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }
 
@@ -112,6 +113,6 @@ exports.login = async (req, res) => {
     }
     res.json({ user: publicUser(user), token: signToken(user) })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    serverError(res, err)
   }
 }

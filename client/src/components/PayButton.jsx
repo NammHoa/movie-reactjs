@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { errorMessage } from '../lib/errors'
 
 export default function PayButton({ bookingId, children = 'Thanh toán', className = 'h-12 w-full' }) {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export default function PayButton({ bookingId, children = 'Thanh toán', classNa
       const { data } = await api.post('/payments', { booking: bookingId })
       navigate(data.paymentUrl)
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể tạo thanh toán, vui lòng thử lại')
+      setError(errorMessage(err, 'Không thể tạo thanh toán, vui lòng thử lại'))
       setBusy(false)
     }
   }

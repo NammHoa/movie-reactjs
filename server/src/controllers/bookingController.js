@@ -6,6 +6,7 @@ const { isValidSeat } = require('../utils/seats')
 const { newExpiry, releaseExpired } = require('../services/bookingExpiry')
 
 const MAX_SEATS_PER_BOOKING = 8
+const MAX_ACTIVE_HOLDS = 5
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // bỏ các ký tự dễ nhầm: I, O, 0, 1
 
 const newCode = () =>
@@ -58,12 +59,21 @@ exports.create = wrap(async (req, res) => {
 
   await releaseExpired({ showtime: showtime._id })
 
+  // Giới hạn số đơn đang giữ ghế mà chưa thanh toán để một người không thể chiếm hết ghế.
+  // Đây là giới hạn mềm: nhiều request đồng thời có thể vượt vài đơn, nhưng đã có rate limit chặn ở phía trước.
+  const holding = await Booking.countDocuments({ user: req.user.id, paymentStatus: 'pending', expiresAt: { $gt: new Date() } })
+  if (holding >= MAX_ACTIVE_HOLDS) {
+    return res.status(429).json({
+      message: `Bạn đang giữ ${holding} đơn chưa thanh toán. Vui lòng thanh toán hoặc hủy bớt trước khi đặt thêm.`,
+    })
+  }
+
   // Giữ ghế bằng MỘT lệnh nguyên tử: chỉ thành công nếu KHÔNG ghế nào trong danh sách đã có người đặt.
   // Hai người bấm cùng lúc thì database xử lý lần lượt, người đến sau sẽ nhận null (không bao giờ bán trùng).
   const held = await Showtime.findOneAndUpdate(
     { _id: showtime._id, startTime: { $gt: new Date() }, bookedSeats: { $nin: seats } },
     { $push: { bookedSeats: { $each: seats } } },
-    { new: true },
+    { returnDocument: 'after' },
   )
   if (!held) {
     const fresh = await Showtime.findById(showtime._id).select('bookedSeats')
@@ -138,7 +148,7 @@ exports.cancel = wrap(async (req, res) => {
   const cancelled = await Booking.findOneAndUpdate(
     { _id: booking._id, paymentStatus: 'pending' },
     { paymentStatus: 'cancelled' },
-    { new: true },
+    { returnDocument: 'after' },
   )
   if (!cancelled) return res.status(409).json({ message: 'Không thể hủy vé này (trạng thái đã thay đổi)' })
 

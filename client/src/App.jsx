@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import RateLimitToast from './components/RateLimitToast'
 import { AdminRoute, ProtectedRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
 import Auth from './pages/user/Auth'
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <>
       <Navbar />
+      <RateLimitToast />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/movies/:id" element={<MovieDetail />} />

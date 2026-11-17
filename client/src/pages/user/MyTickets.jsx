@@ -4,6 +4,7 @@ import api from '../../api/axios'
 import Countdown from '../../components/Countdown'
 import { Poster } from '../../components/MovieCard'
 import PayButton from '../../components/PayButton'
+import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
 const TABS = [
@@ -112,7 +113,7 @@ export default function MyTickets() {
       const { data } = await api.post(`/bookings/${b._id}/cancel`)
       setBookings((list) => list.map((x) => (x._id === data._id ? data : x)))
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể hủy vé')
+      setError(errorMessage(err, 'Không thể hủy vé'))
     } finally {
       setBusyId(null)
     }
