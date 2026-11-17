@@ -45,4 +45,24 @@ const registerLimiter = limiter({ windowMs: 60 * MINUTE, limit: 10, skipFailedRe
 // Bước kiểm tra "SĐT/Email đã có tài khoản chưa" có thể bị dùng để dò danh sách người dùng.
 const checkLimiter = limiter({ windowMs: 15 * MINUTE, limit: 40 })
 
-module.exports = { limiter, MINUTE, loginAccountLimiter, loginIpLimiter, registerLimiter, checkLimiter }
+// Lưới an toàn cho toàn bộ API, theo IP. Đủ rộng cho nhiều người cùng dùng một mạng wifi.
+const apiLimiter = limiter({ windowMs: 5 * MINUTE, limit: 600 })
+
+// Đặt SAU verifyToken: đếm theo tài khoản, nên đổi IP cũng không né được; request chưa đăng nhập thì rơi về IP.
+const userKey = (req) => (req.user?.id ? `u:${req.user.id}` : ipKeyGenerator(req.ip))
+
+// Giữ ghế và thanh toán là các thao tác tốn tài nguyên và có thể bị lạm dụng để chiếm ghế nên giới hạn chặt hơn.
+const bookingCreateLimiter = limiter({ windowMs: 10 * MINUTE, limit: 10, key: userKey })
+const paymentLimiter = limiter({ windowMs: 10 * MINUTE, limit: 20, key: userKey })
+
+module.exports = {
+  limiter,
+  MINUTE,
+  loginAccountLimiter,
+  loginIpLimiter,
+  registerLimiter,
+  checkLimiter,
+  apiLimiter,
+  bookingCreateLimiter,
+  paymentLimiter,
+}

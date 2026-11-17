@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
+const { apiLimiter } = require('./middleware/rateLimit')
 
 const app = express()
 
@@ -15,6 +16,7 @@ app.use(cookieParser())
 app.use(morgan('dev'))
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
+app.use('/api', apiLimiter)
 app.use('/api/auth', require('./routes/authRoutes'))
 app.use('/api/movies', require('./routes/movieRoutes'))
 app.use('/api/cinemas', require('./routes/cinemaRoutes'))
