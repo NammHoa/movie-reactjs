@@ -24,8 +24,9 @@ const POPULATE = {
 // chỉ hủy được đơn chưa thanh toán và suất chiếu chưa bắt đầu.
 const present = (booking) => {
   const obj = booking.toObject()
-  obj.canCancel =
-    booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > new Date()
+  const now = new Date()
+  obj.canCancel = booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > now
+  obj.canPay = booking.paymentStatus === 'pending' && !(booking.expiresAt <= now)
   return obj
 }
 

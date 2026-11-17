@@ -10,6 +10,7 @@ const bookingSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
     paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired'], default: 'pending' },
     expiresAt: Date,
+    paidAt: Date,
   },
   { timestamps: true },
 )
