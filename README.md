@@ -18,3 +18,37 @@ npm run dev
 ```
 
 Client: http://localhost:5173 — Server: http://localhost:5000
+
+
+## Deploy (Atlas + Render + Vercel)
+
+Làm theo thứ tự: database -> server -> giao diện -> nối lại CORS.
+
+### 1. MongoDB Atlas
+- Network Access: thêm `0.0.0.0/0` (Render bản miễn phí không có IP cố định).
+- Lấy chuỗi kết nối (`mongodb+srv://...`) cho `MONGO_URI`.
+
+### 2. Server trên Render
+- New -> Blueprint, chọn repo này (file `render.yaml` ở thư mục gốc đã có sẵn cấu hình), hoặc tạo Web Service thủ công: Root Directory `server`, Build `npm install`, Start `npm start`, Health Check `/api/health`.
+- Biến môi trường:
+
+| Biến | Giá trị |
+|---|---|
+| `NODE_ENV` | `production` |
+| `MONGO_URI` | chuỗi kết nối Atlas |
+| `JWT_SECRET` | chuỗi ngẫu nhiên mới (Blueprint tự sinh), không dùng lại khóa ở máy |
+| `CLIENT_URL` | địa chỉ Vercel, ví dụ `https://ten-app.vercel.app` (không có `/` ở cuối) |
+| `TRUST_PROXY` | `1` |
+| `ALLOW_MOCK_PAYMENT` | `true` chỉ cho bản demo (thanh toán giả lập, không thu tiền) |
+
+- Tạo tài khoản admin: dùng tab Shell của Render hoặc chạy ở máy với `MONGO_URI` của Atlas: `npm run make-admin -- email@cua-ban.com`.
+- Bản miễn phí "ngủ" sau ~15 phút không có người dùng, request đầu tiên sẽ chậm.
+
+### 3. Giao diện trên Vercel
+- Import repo, Root Directory `client` (Vite được nhận diện tự động).
+- Biến môi trường: `VITE_API_URL` = địa chỉ server Render (không có `/api`, không có `/` ở cuối).
+- `client/vercel.json` đã có rewrite để mở thẳng các đường dẫn như `/ticket/...` không bị 404.
+
+### 4. Nối lại
+- Sau khi có địa chỉ Vercel, đặt nó vào `CLIENT_URL` trên Render (server tự khởi động lại).
+- Đổi `VITE_API_URL` thì phải Redeploy giao diện, vì biến này được ghi vào bản build.

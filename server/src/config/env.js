@@ -59,7 +59,11 @@ function validateEnv(env = process.env) {
 
   if (production) {
     if (!env.PAYMENT_GATEWAY || env.PAYMENT_GATEWAY === 'mock') {
-      warnings.push('Cổng thanh toán giả lập bị tắt ở production, nên khách sẽ không thanh toán được cho đến khi tích hợp cổng thật.')
+      warnings.push(
+        env.ALLOW_MOCK_PAYMENT === 'true'
+          ? 'ALLOW_MOCK_PAYMENT=true: cổng thanh toán GIẢ LẬP đang bật ở production (chỉ dùng cho bản demo, không thu tiền thật).'
+          : 'Cổng thanh toán giả lập bị tắt ở production, nên khách sẽ không thanh toán được cho đến khi tích hợp cổng thật.',
+      )
     }
     if (env.RATE_LIMIT_OFF === 'true') warnings.push('RATE_LIMIT_OFF bị bỏ qua ở production, giới hạn request vẫn bật.')
   }

@@ -1,8 +1,11 @@
 import axios from 'axios'
 import { RATE_LIMIT_EVENT } from '../lib/errors'
 
+// Dev: để trống, Vite proxy chuyển /api sang server. Deploy: đặt VITE_API_URL=https://ten-server.onrender.com
+const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_ORIGIN}/api`,
   withCredentials: true,
 })
 
