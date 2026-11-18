@@ -55,8 +55,19 @@ const userKey = (req) => (req.user?.id ? `u:${req.user.id}` : ipKeyGenerator(req
 const bookingCreateLimiter = limiter({ windowMs: 10 * MINUTE, limit: 10, key: userKey })
 const paymentLimiter = limiter({ windowMs: 10 * MINUTE, limit: 20, key: userKey })
 
+// Chặn đoán mật khẩu hiện tại bằng token bị lộ: chỉ đếm các lần nhập SAI mật khẩu hiện tại (403),
+// nhập mật khẩu mới sai định dạng không bị tính.
+const changePasswordLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 5,
+  key: userKey,
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (req, res) => res.statusCode !== 403,
+})
+
 module.exports = {
   limiter,
+  changePasswordLimiter,
   MINUTE,
   loginAccountLimiter,
   loginIpLimiter,

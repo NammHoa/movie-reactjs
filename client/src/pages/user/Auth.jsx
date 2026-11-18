@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
@@ -15,9 +15,9 @@ import {
 } from '../../components/AuthUI'
 import { errorMessage, formatCountdown, isRateLimited, retryAfterOf } from '../../lib/errors'
 import { useCooldown } from '../../lib/useCooldown'
+import { useGeo } from '../../lib/useGeo'
 import { PASSWORD_RULES, PHONE_RE, EMAIL_RE, isPasswordValid, normalizePhone, parseIdentifier } from '../../lib/validators'
 
-const GEO_API = 'https://provinces.open-api.vn/api/v1'
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
 const emptyReg = {
@@ -45,31 +45,7 @@ export default function Auth() {
   const waitLabel = (label) => (blocked ? `Thử lại sau ${formatCountdown(cooldown.secondsLeft)}` : label)
 
   // Tỉnh / quận lấy từ API công khai; nếu lỗi thì cho nhập tay
-  const [provinces, setProvinces] = useState(null)
-  const [districtData, setDistrictData] = useState({ city: '', list: [] })
-  const districts = districtData.city === reg.city ? districtData.list : []
-  const geoFailed = provinces !== null && provinces.length === 0
-
-  useEffect(() => {
-    if (step !== 'register2' || provinces !== null) return
-    fetch(`${GEO_API}/?depth=1`)
-      .then((r) => r.json())
-      .then((list) => setProvinces(list.map((p) => ({ code: p.code, name: p.name }))))
-      .catch(() => setProvinces([]))
-  }, [step, provinces])
-
-  useEffect(() => {
-    const province = provinces?.find((p) => p.name === reg.city)
-    if (!province) return
-    let cancelled = false
-    fetch(`${GEO_API}/p/${province.code}?depth=2`)
-      .then((r) => r.json())
-      .then((data) => !cancelled && setDistrictData({ city: reg.city, list: data.districts.map((d) => d.name) }))
-      .catch(() => !cancelled && setDistrictData({ city: reg.city, list: [] }))
-    return () => {
-      cancelled = true
-    }
-  }, [reg.city, provinces])
+  const { provinces, districts, geoFailed } = useGeo(reg.city, step === 'register2')
 
   const goto = (next) => {
     setErrors({})

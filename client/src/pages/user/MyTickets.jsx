@@ -18,7 +18,11 @@ const isLapsed = (b, now) =>
 
 function statusOf(b, now) {
   if (b.paymentStatus === 'cancelled') return { label: 'Đã hủy', cls: 'bg-gray-200 text-gray-600' }
-  if (b.paymentStatus === 'paid') return { label: 'Đã thanh toán', cls: 'bg-green-100 text-green-700' }
+  if (b.paymentStatus === 'paid') {
+    return b.checkedInAt
+      ? { label: 'Đã sử dụng', cls: 'bg-gray-200 text-gray-600' }
+      : { label: 'Đã thanh toán', cls: 'bg-green-100 text-green-700' }
+  }
   if (isLapsed(b, now)) return { label: 'Hết hạn thanh toán', cls: 'bg-gray-200 text-gray-600' }
   if (!b.showtime || new Date(b.showtime.startTime).getTime() <= now) {
     return { label: 'Đã qua suất chiếu', cls: 'bg-gray-200 text-gray-600' }
@@ -26,8 +30,9 @@ function statusOf(b, now) {
   return { label: 'Chờ thanh toán', cls: 'bg-amber-100 text-amber-700' }
 }
 
+// Vé đã quét ở cửa rạp thì thuộc về lịch sử
 const isUpcoming = (b, now) =>
-  b.paymentStatus !== 'cancelled' && !isLapsed(b, now) && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
+  b.paymentStatus !== 'cancelled' && !b.checkedInAt && !isLapsed(b, now) && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
 
 function TicketCard({ booking, now, onCancel, onExpire, busy }) {
   const { showtime } = booking

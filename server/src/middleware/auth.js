@@ -24,6 +24,10 @@ const verifyToken = async (req, res, next) => {
   try {
     const account = await User.findById(payload.id).select('-password')
     if (!account) return res.status(401).json({ message: 'Tài khoản không còn tồn tại' })
+    // Đổi mật khẩu thì mọi phiên đăng nhập cũ (kể cả token bị lộ) mất hiệu lực. iat tính bằng giây.
+    if (account.passwordChangedAt && payload.iat < Math.floor(account.passwordChangedAt.getTime() / 1000)) {
+      return res.status(401).json({ message: 'Mật khẩu đã được đổi, vui lòng đăng nhập lại' })
+    }
     req.account = account // toàn bộ thông tin tài khoản (không có mật khẩu)
     req.user = { id: account._id.toString(), role: account.role } // role lấy từ database
     next()

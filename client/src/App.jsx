@@ -17,6 +17,7 @@ import Booking from './pages/user/Booking'
 import MyTickets from './pages/user/MyTickets'
 import Pay from './pages/user/Pay'
 import Ticket from './pages/user/Ticket'
+import Profile from './pages/user/Profile'
 import PaymentResult from './pages/user/PaymentResult'
 
 export default function App() {
@@ -33,6 +34,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MyTickets />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />
