@@ -3,23 +3,12 @@ const Payment = require('../models/Payment')
 const Showtime = require('../models/Showtime')
 const User = require('../models/User')
 const { isId, wrap } = require('../utils/http')
+const { ADMIN_POPULATE: POPULATE } = require('../services/bookingView')
 
 const STATUSES = ['pending', 'paid', 'cancelled', 'expired']
 const MAX_LIMIT = 100
 const MAX_QUERY = 50
 const NOT_FOUND = { message: 'Không tìm thấy đơn' }
-
-const POPULATE = [
-  { path: 'user', select: 'name email phone' },
-  {
-    path: 'showtime',
-    select: 'movie room startTime endTime price',
-    populate: [
-      { path: 'movie', select: 'title' },
-      { path: 'room', select: 'name cinema', populate: { path: 'cinema', select: 'name city' } },
-    ],
-  },
-]
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
