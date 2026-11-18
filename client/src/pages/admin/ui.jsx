@@ -12,7 +12,7 @@ export function Row({ label, children }) {
 
 export function PageHeader({ title, action }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-3">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 className="border-l-4 border-brand pl-3 text-2xl font-bold">{title}</h1>
       {action}
     </div>

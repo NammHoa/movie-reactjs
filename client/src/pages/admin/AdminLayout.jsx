@@ -12,7 +12,7 @@ export default function AdminLayout() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:flex-row">
       <aside className="md:w-52 md:shrink-0">
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Quản trị</p>
-        <nav className="flex gap-2 md:flex-col">
+        <nav className="flex flex-wrap gap-2 md:flex-col md:flex-nowrap">
           {LINKS.map((l) => (
             <NavLink
               key={l.to}

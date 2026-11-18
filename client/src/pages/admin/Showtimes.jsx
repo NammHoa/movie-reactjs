@@ -166,7 +166,7 @@ export default function Showtimes() {
             setLoading(true)
             setMovieFilter(e.target.value)
           }}
-          className="rounded border border-gray-300 bg-white px-3 py-2"
+          className="max-w-full rounded border border-gray-300 bg-white px-3 py-2"
         >
           <option value="">Tất cả phim</option>
           {movies.map((m) => (
