@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { errorMessage } from '../lib/errors'
@@ -8,12 +8,21 @@ export default function PayButton({ bookingId, children = 'Thanh toán', classNa
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // Bấm "Quay lại" từ trang VNPay, trình duyệt khôi phục trang này nguyên trạng (nút còn đang "chuyển hướng")
+  useEffect(() => {
+    const reset = (e) => e.persisted && setBusy(false)
+    window.addEventListener('pageshow', reset)
+    return () => window.removeEventListener('pageshow', reset)
+  }, [])
+
   const pay = async () => {
     setBusy(true)
     setError('')
     try {
       const { data } = await api.post('/payments', { booking: bookingId })
-      navigate(data.paymentUrl)
+      // Cổng thật (VNPay) trả địa chỉ tuyệt đối ở trang khác; cổng giả lập trả đường dẫn nội bộ
+      if (/^https?:\/\//.test(data.paymentUrl)) window.location.assign(data.paymentUrl)
+      else navigate(data.paymentUrl)
     } catch (err) {
       setError(errorMessage(err, 'Không thể tạo thanh toán, vui lòng thử lại'))
       setBusy(false)

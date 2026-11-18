@@ -9,4 +9,6 @@ const mockEnabled = () =>
 // Giả lập: trang /pay/:id của chính website. Khi làm VNPay, thay bằng URL đã ký của VNPay.
 const paymentUrl = (payment) => `/pay/${payment._id}`
 
-module.exports = { PROVIDER, mockEnabled, paymentUrl }
+const vnpayEnabled = () => PROVIDER === 'vnpay'
+
+module.exports = { PROVIDER, mockEnabled, vnpayEnabled, paymentUrl }
