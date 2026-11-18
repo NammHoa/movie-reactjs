@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
     district: String,
     address: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    passwordChangedAt: Date, // token cấp trước thời điểm này không còn dùng được
   },
   { timestamps: true },
 )

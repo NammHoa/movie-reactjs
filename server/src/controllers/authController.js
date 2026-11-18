@@ -1,11 +1,8 @@
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
 const User = require('../models/User')
 const { serverError, str } = require('../utils/http')
 const { GENDERS, parseIdentifier, passwordError } = require('../utils/validators')
-
-const signToken = (user) =>
-  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' })
+const { signToken } = require('../utils/token')
 
 const publicUser = (u) => ({
   id: u._id,

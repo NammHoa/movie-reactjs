@@ -1,6 +1,8 @@
+const bcrypt = require('bcryptjs')
 const User = require('../models/User')
 const { str, wrap } = require('../utils/http')
-const { GENDERS, parseIdentifier } = require('../utils/validators')
+const { signToken } = require('../utils/token')
+const { GENDERS, parseIdentifier, passwordError } = require('../utils/validators')
 
 const NAME_MAX = 100
 const PLACE_MAX = 100
@@ -86,4 +88,35 @@ exports.update = wrap(async (req, res) => {
     if (err.code === 11000) return res.status(409).json({ message: 'Số điện thoại đã được sử dụng' })
     throw err
   }
+})
+
+// POST /api/auth/change-password  { currentPassword, newPassword }
+// Trả token mới cho phiên hiện tại; các token cũ (thiết bị khác) bị vô hiệu hóa.
+// Sai mật khẩu hiện tại trả 403 chứ không phải 401, vì client coi 401 là "hết phiên" và tự đăng xuất.
+exports.changePassword = wrap(async (req, res) => {
+  const { currentPassword, newPassword } = req.body ?? {}
+  if (typeof currentPassword !== 'string' || !currentPassword) {
+    return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại' })
+  }
+  const pwErr = passwordError(newPassword)
+  if (pwErr) return res.status(400).json({ message: pwErr })
+  if (newPassword === currentPassword) {
+    return res.status(400).json({ message: 'Mật khẩu mới phải khác mật khẩu hiện tại' })
+  }
+
+  const user = await User.findById(req.account._id).select('password')
+  if (!user) return res.status(401).json({ message: 'Tài khoản không còn tồn tại' })
+  if (!(await bcrypt.compare(currentPassword, user.password))) {
+    return res.status(403).json({ message: 'Mật khẩu hiện tại không đúng' })
+  }
+
+  // Chỉ ghi nếu mật khẩu vẫn là bản vừa kiểm tra, tránh hai lần đổi chạy chồng lên nhau
+  const updated = await User.findOneAndUpdate(
+    { _id: user._id, password: user.password },
+    { password: await bcrypt.hash(newPassword, 10), passwordChangedAt: new Date() },
+    { returnDocument: 'after' },
+  )
+  if (!updated) return res.status(409).json({ message: 'Mật khẩu vừa được thay đổi ở nơi khác, vui lòng thử lại' })
+
+  res.json({ message: 'Đã đổi mật khẩu', token: signToken(updated) })
 })
