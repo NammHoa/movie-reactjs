@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import BookingSummary from '../../components/BookingSummary'
 import Countdown from '../../components/Countdown'
 import PayButton from '../../components/PayButton'
-import { loadPayment } from '../../lib/payment'
+import { failMessage, loadPayment } from '../../lib/payment'
 
 const HEADERS = {
   success: { bg: 'bg-green-600', icon: '✓', title: 'Thanh toán thành công' },
@@ -46,6 +46,12 @@ export default function PaymentResult() {
 
   const header = HEADERS[payment.status]
   const canRetry = payment.status === 'failed' && booking.canPay && !over
+  // Khách đã bị trừ tiền nhưng ghế đã hết hạn giữ: cần hoàn tiền nên phải nói rõ và đưa mã giao dịch để đối chiếu
+  const reason =
+    payment.status === 'failed' &&
+    (payment.failReason === 'booking_not_payable'
+      ? `Giao dịch đã được ghi nhận nhưng đơn đã hết hạn giữ ghế nên không còn hiệu lực. Vui lòng liên hệ rạp kèm mã giao dịch ${payment.txnRef} để được hoàn tiền.`
+      : failMessage(payment.failReason))
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
@@ -57,6 +63,8 @@ export default function PaymentResult() {
 
         <div className="space-y-5 p-6">
           <BookingSummary booking={booking} />
+
+          {reason && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{reason}</p>}
 
           {payment.status === 'success' && (
             <div className="space-y-3">

@@ -15,6 +15,7 @@ const present = (payment, booking) => ({
   provider: payment.provider,
   txnRef: payment.txnRef,
   paidAt: payment.paidAt,
+  failReason: payment.failReason,
   paymentUrl: payment.provider === 'vnpay' ? null : paymentUrl(payment),
   booking: booking && { _id: booking._id, code: booking.code, paymentStatus: booking.paymentStatus, expiresAt: booking.expiresAt },
 })

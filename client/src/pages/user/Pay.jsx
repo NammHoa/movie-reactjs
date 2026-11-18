@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import BookingSummary from '../../components/BookingSummary'
 import Countdown from '../../components/Countdown'
+import PayButton from '../../components/PayButton'
 import { errorMessage } from '../../lib/errors'
 import { formatPrice } from '../../lib/movie'
 import { loadPayment } from '../../lib/payment'
@@ -60,6 +61,7 @@ export default function Pay() {
   }
 
   const payable = booking.canPay && !over
+  const mock = payment.provider === 'mock'
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
@@ -71,7 +73,9 @@ export default function Pay() {
 
         <div className="space-y-5 p-6">
           <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Đây là cổng thanh toán giả lập để thử nghiệm, không có khoản tiền thật nào bị trừ.
+            {mock
+              ? 'Đây là cổng thanh toán giả lập để thử nghiệm, không có khoản tiền thật nào bị trừ.'
+              : 'Đây là môi trường thử nghiệm của VNPay, không có khoản tiền thật nào bị trừ.'}
           </p>
 
           <div className="text-center">
@@ -88,22 +92,26 @@ export default function Pay() {
                 Ghế được giữ trong <Countdown expiresAt={booking.expiresAt} onExpire={() => setOver(true)} />
               </p>
               {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-              <div className="space-y-2">
-                <button
-                  onClick={() => confirm('success')}
-                  disabled={!!busy}
-                  className="h-12 w-full rounded bg-green-600 font-bold text-white transition hover:bg-green-700 disabled:opacity-60"
-                >
-                  {busy === 'success' ? 'Đang xử lý...' : 'Giả lập: thanh toán thành công'}
-                </button>
-                <button
-                  onClick={() => confirm('failed')}
-                  disabled={!!busy}
-                  className="h-12 w-full rounded border border-red-300 font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
-                >
-                  {busy === 'failed' ? 'Đang xử lý...' : 'Giả lập: thanh toán thất bại'}
-                </button>
-              </div>
+              {mock ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => confirm('success')}
+                    disabled={!!busy}
+                    className="h-12 w-full rounded bg-green-600 font-bold text-white transition hover:bg-green-700 disabled:opacity-60"
+                  >
+                    {busy === 'success' ? 'Đang xử lý...' : 'Giả lập: thanh toán thành công'}
+                  </button>
+                  <button
+                    onClick={() => confirm('failed')}
+                    disabled={!!busy}
+                    className="h-12 w-full rounded border border-red-300 font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {busy === 'failed' ? 'Đang xử lý...' : 'Giả lập: thanh toán thất bại'}
+                  </button>
+                </div>
+              ) : (
+                <PayButton bookingId={booking._id}>Thanh toán qua VNPay</PayButton>
+              )}
               <Link to="/my-tickets" className="block text-center text-sm text-gray-500 hover:text-brand">
                 Để sau, quay lại vé của tôi
               </Link>
