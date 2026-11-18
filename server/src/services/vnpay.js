@@ -59,7 +59,9 @@ function verify(query) {
   if (typeof received !== 'string') return false
   const params = {}
   for (const [k, v] of Object.entries(query)) {
-    if (k.startsWith('vnp_') && k !== 'vnp_SecureHash' && k !== 'vnp_SecureHashType' && typeof v === 'string') params[k] = v
+    if (!k.startsWith('vnp_') || k === 'vnp_SecureHash' || k === 'vnp_SecureHashType') continue
+    if (typeof v !== 'string') return false // tham số lặp (mảng) không bao giờ hợp lệ
+    params[k] = v
   }
   const expected = Buffer.from(hmac(signData(params)))
   const actual = Buffer.from(received.toLowerCase())
