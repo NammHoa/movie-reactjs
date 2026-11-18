@@ -8,6 +8,7 @@ import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
 import Bookings from './pages/admin/Bookings'
 import Checkin from './pages/admin/Checkin'
+import Users from './pages/admin/Users'
 import Movies from './pages/admin/Movies'
 import Cinemas from './pages/admin/Cinemas'
 import Showtimes from './pages/admin/Showtimes'
@@ -73,6 +74,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="checkin" element={<Checkin />} />
+          <Route path="users" element={<Users />} />
           <Route path="movies" element={<Movies />} />
           <Route path="cinemas" element={<Cinemas />} />
           <Route path="showtimes" element={<Showtimes />} />
