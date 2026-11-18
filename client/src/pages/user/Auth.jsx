@@ -62,7 +62,7 @@ export default function Auth() {
   }
 
   const finish = (data) => {
-    login(data.user, data.token)
+    login(data.user, data.token, data.refreshToken)
     // Quay lại trang đang xem dở (vd. trang chọn ghế) nếu có, chỉ nhận đường dẫn nội bộ
     const from = location.state?.from
     const back = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : null

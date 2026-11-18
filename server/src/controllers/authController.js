@@ -3,6 +3,7 @@ const User = require('../models/User')
 const { serverError, str } = require('../utils/http')
 const { GENDERS, parseIdentifier, passwordError } = require('../utils/validators')
 const { signToken } = require('../utils/token')
+const refreshTokens = require('../services/refreshTokens')
 
 const publicUser = (u) => ({
   id: u._id,
@@ -68,7 +69,7 @@ exports.register = async (req, res) => {
       district: str(req.body.district),
       address: str(req.body.address),
     })
-    res.status(201).json({ user: publicUser(user), token: signToken(user) })
+    res.status(201).json({ user: publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ message: 'Email hoặc số điện thoại đã được sử dụng' })
     serverError(res, err)
@@ -83,7 +84,28 @@ exports.login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Thông tin đăng nhập hoặc mật khẩu không đúng' })
     }
-    res.json({ user: publicUser(user), token: signToken(user) })
+    res.json({ user: publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
+  } catch (err) {
+    serverError(res, err)
+  }
+}
+
+// POST /api/auth/refresh  { refreshToken } -> cặp token mới; token cũ không dùng lại được
+exports.refresh = async (req, res) => {
+  try {
+    const result = await refreshTokens.rotate(req.body?.refreshToken)
+    if (!result) return res.status(401).json({ message: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại' })
+    res.json({ user: publicUser(result.user), token: signToken(result.user), refreshToken: result.refreshToken })
+  } catch (err) {
+    serverError(res, err)
+  }
+}
+
+// POST /api/auth/logout  { refreshToken } -> hủy phiên này (luôn trả 204, không tiết lộ token có thật hay không)
+exports.logout = async (req, res) => {
+  try {
+    await refreshTokens.revoke(req.body?.refreshToken)
+    res.status(204).end()
   } catch (err) {
     serverError(res, err)
   }
