@@ -45,7 +45,9 @@ export default function Ticket() {
     )
   }
 
-  const used = !!showtime && new Date(showtime.endTime).getTime() <= now
+  const checkedIn = !!booking.checkedInAt
+  const ended = !!showtime && new Date(showtime.endTime).getTime() <= now
+  const dimmed = checkedIn || ended
   const cinema = showtime?.room?.cinema
 
   return (
@@ -78,11 +80,15 @@ export default function Ticket() {
         <div className="relative border-t-2 border-dashed border-gray-200 px-5 pb-6 pt-5 text-center">
           <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
           <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
-          <div className={`mx-auto w-fit rounded-lg border border-gray-200 p-3 ${used ? 'opacity-30' : ''}`}>
+          <div className={`mx-auto w-fit rounded-lg border border-gray-200 p-3 ${dimmed ? 'opacity-30' : ''}`}>
             <QRCodeSVG value={booking.code} size={168} level="M" />
           </div>
           <p className="mt-3 font-mono text-2xl font-extrabold tracking-widest">{booking.code}</p>
-          {used ? (
+          {checkedIn ? (
+            <p role="status" className="mt-2 rounded bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-600">
+              Vé đã được sử dụng lúc {formatDateTime(booking.checkedInAt)}
+            </p>
+          ) : ended ? (
             <p className="mt-2 rounded bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-600">Suất chiếu đã kết thúc, vé hết hiệu lực</p>
           ) : (
             <p className="mt-2 text-xs text-gray-500">Đưa mã QR này cho nhân viên rạp để vào phòng chiếu</p>
