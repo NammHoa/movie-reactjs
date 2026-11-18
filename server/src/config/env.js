@@ -53,7 +53,17 @@ function validateEnv(env = process.env) {
     errors.push(`TRUST_PROXY phải là số nguyên không âm (số proxy đứng trước server), hiện là "${env.TRUST_PROXY}"`)
   }
 
-  if (env.HOLD_MINUTES && !(Number(env.HOLD_MINUTES) > 0)) {
+  if (env.PAYMENT_GATEWAY === 'vnpay') {
+    if (!env.VNPAY_TMN_CODE) errors.push('Thiếu VNPAY_TMN_CODE (mã website do VNPay cấp).')
+    if (!env.VNPAY_HASH_SECRET) errors.push('Thiếu VNPAY_HASH_SECRET (chuỗi bí mật do VNPay cấp).')
+    const server = parseUrl(env.SERVER_URL || '')
+    if (!server) errors.push('Thiếu hoặc sai SERVER_URL (địa chỉ công khai của server, ví dụ https://ten-server.onrender.com): VNPay dùng nó để đưa khách quay về.')
+    else if (production && server.protocol !== 'https:') warnings.push('SERVER_URL ở production nên dùng https.')
+  } else if (env.PAYMENT_GATEWAY && env.PAYMENT_GATEWAY !== 'mock') {
+    errors.push(`PAYMENT_GATEWAY không hợp lệ: "${env.PAYMENT_GATEWAY}" (chỉ hỗ trợ mock hoặc vnpay).`)
+  }
+
+  if (env.HOLD_MINUTES &&!(Number(env.HOLD_MINUTES) > 0)) {
     warnings.push(`HOLD_MINUTES không hợp lệ ("${env.HOLD_MINUTES}"), server sẽ dùng mặc định 10 phút.`)
   }
 

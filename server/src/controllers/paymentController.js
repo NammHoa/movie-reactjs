@@ -2,7 +2,8 @@ const crypto = require('crypto')
 const Booking = require('../models/Booking')
 const Payment = require('../models/Payment')
 const { isId, wrap } = require('../utils/http')
-const { mockEnabled, paymentUrl } = require('../services/paymentGateway')
+const { PROVIDER, mockEnabled, vnpayEnabled, paymentUrl } = require('../services/paymentGateway')
+const vnpay = require('../services/vnpay')
 const { releaseExpired } = require('../services/bookingExpiry')
 
 const NOT_FOUND = { message: 'Không tìm thấy giao dịch' }
@@ -14,7 +15,7 @@ const present = (payment, booking) => ({
   provider: payment.provider,
   txnRef: payment.txnRef,
   paidAt: payment.paidAt,
-  paymentUrl: paymentUrl(payment),
+  paymentUrl: payment.provider === 'vnpay' ? null : paymentUrl(payment),
   booking: booking && { _id: booking._id, code: booking.code, paymentStatus: booking.paymentStatus, expiresAt: booking.expiresAt },
 })
 
@@ -33,17 +34,21 @@ exports.create = wrap(async (req, res) => {
     return res.status(409).json({ message: notPayableMessage(booking) })
   }
 
-  let payment = await Payment.findOne({ booking: booking._id, status: 'pending' })
+  let payment = await Payment.findOne({ booking: booking._id, status: 'pending', provider: PROVIDER })
   const created = !payment
   if (!payment) {
     payment = await Payment.create({
       booking: booking._id,
       user: req.user.id,
       amount: booking.totalPrice,
+      provider: PROVIDER,
       txnRef: `${booking.code}${crypto.randomBytes(5).toString('hex').toUpperCase()}`,
     })
   }
-  res.status(created ? 201 : 200).json(present(payment, booking))
+  const body = present(payment, booking)
+  // VNPay: URL chứa số tiền, mã giao dịch và giờ hết hạn nên được ký mới ở mỗi lần bấm thanh toán
+  if (vnpayEnabled()) body.paymentUrl = vnpay.buildPayUrl({ payment, booking, ip: req.ip })
+  res.status(created ? 201 : 200).json(body)
 })
 
 // GET /api/payments/:id
