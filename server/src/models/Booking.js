@@ -11,11 +11,14 @@ const bookingSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired'], default: 'pending' },
     expiresAt: Date,
     paidAt: Date,
+    checkedInAt: Date, // thời điểm vào rạp (quét vé); có giá trị nghĩa là vé đã được dùng
+    checkedInBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 )
 
 bookingSchema.index({ user: 1, createdAt: -1 })
 bookingSchema.index({ paymentStatus: 1, expiresAt: 1 })
+bookingSchema.index({ paymentStatus: 1, paidAt: 1 }) // thống kê doanh thu theo ngày thanh toán
 
 module.exports = mongoose.model('Booking', bookingSchema)
