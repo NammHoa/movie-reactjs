@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 const LINKS = [
   { to: '/admin', label: 'Tổng quan', end: true },
+  { to: '/admin/bookings', label: 'Đơn đặt vé' },
   { to: '/admin/movies', label: 'Quản lý phim' },
   { to: '/admin/cinemas', label: 'Rạp & phòng chiếu' },
   { to: '/admin/showtimes', label: 'Suất chiếu' },
