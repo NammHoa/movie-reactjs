@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import api from '../api/axios'
+import api, { bare } from '../api/axios'
+import { clearSession, getRefreshToken, getToken, saveSession } from '../lib/session'
 
 const AuthContext = createContext(null)
 
@@ -15,31 +16,32 @@ export function AuthProvider({ children }) {
   // Mỗi lần mở trang: hỏi server tài khoản hiện tại để cập nhật lại role.
   // (Nếu token hết hạn / tài khoản bị xóa, interceptor trong api/axios.js sẽ tự đăng xuất.)
   useEffect(() => {
-    if (!localStorage.getItem('token')) return
+    if (!getToken()) return
     api
       .get('/auth/me')
       .then(({ data }) => {
-        localStorage.setItem('user', JSON.stringify(data.user))
+        saveSession({ user: data.user })
         setUser(data.user)
       })
       .catch(() => {})
   }, [])
 
-  const login = (userData, token) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(userData))
+  const login = (userData, token, refreshToken) => {
+    saveSession({ token, refreshToken, user: userData })
     setUser(userData)
   }
 
   // Cập nhật thông tin hiển thị (tên, số điện thoại...) sau khi sửa hồ sơ; token giữ nguyên
   const updateUser = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData))
+    saveSession({ user: userData })
     setUser(userData)
   }
 
+  // Báo server hủy phiên; không liên lạc được thì vẫn đăng xuất ở máy này
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    const refreshToken = getRefreshToken()
+    if (refreshToken) bare.post('/auth/logout', { refreshToken }).catch(() => {})
+    clearSession()
     setUser(null)
   }
 

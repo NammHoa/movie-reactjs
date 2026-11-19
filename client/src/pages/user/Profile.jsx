@@ -186,7 +186,7 @@ function PasswordForm() {
     try {
       const { data } = await api.post('/auth/change-password', { currentPassword: pw.current, newPassword: pw.next })
       // Server đã vô hiệu các token cũ: phải dùng token mới thì phiên này mới không bị đăng xuất
-      login(user, data.token)
+      login(user, data.token, data.refreshToken)
       setPw(emptyPw)
       cooldown.clear()
       setDone(true)

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs')
 const User = require('../models/User')
 const { str, wrap } = require('../utils/http')
 const { signToken } = require('../utils/token')
+const refreshTokens = require('../services/refreshTokens')
 const { GENDERS, parseIdentifier, passwordError } = require('../utils/validators')
 
 const NAME_MAX = 100
@@ -118,5 +119,7 @@ exports.changePassword = wrap(async (req, res) => {
   )
   if (!updated) return res.status(409).json({ message: 'Mật khẩu vừa được thay đổi ở nơi khác, vui lòng thử lại' })
 
-  res.json({ message: 'Đã đổi mật khẩu', token: signToken(updated) })
+  // Đăng xuất mọi thiết bị khác, giữ phiên hiện tại bằng refresh token mới
+  await refreshTokens.revokeAllForUser(updated._id)
+  res.json({ message: 'Đã đổi mật khẩu', token: signToken(updated), refreshToken: await refreshTokens.issue(updated._id) })
 })

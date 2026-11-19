@@ -42,6 +42,9 @@ const loginIpLimiter = limiter({ windowMs: 15 * MINUTE, limit: 30, skipSuccessfu
 // Chỉ đếm lần đăng ký THÀNH CÔNG: chặn tạo tài khoản hàng loạt nhưng không phạt người gõ sai form.
 const registerLimiter = limiter({ windowMs: 60 * MINUTE, limit: 10, skipFailedRequests: true })
 
+// Làm mới phiên chạy nền khi token hết hạn; nhiều tab cùng IP vẫn đủ rộng, nhưng chặn được việc dò token hàng loạt.
+const refreshLimiter = limiter({ windowMs: 15 * MINUTE, limit: 60 })
+
 // Bước kiểm tra "SĐT/Email đã có tài khoản chưa" có thể bị dùng để dò danh sách người dùng.
 const checkLimiter = limiter({ windowMs: 15 * MINUTE, limit: 40 })
 
@@ -73,6 +76,7 @@ module.exports = {
   loginIpLimiter,
   registerLimiter,
   checkLimiter,
+  refreshLimiter,
   apiLimiter,
   bookingCreateLimiter,
   paymentLimiter,
