@@ -4,6 +4,8 @@ const Showtime = require('../models/Showtime')
 const { isId, wrap } = require('../utils/http')
 const { isValidSeat } = require('../utils/seats')
 const { newExpiry, releaseExpired } = require('../services/bookingExpiry')
+const mailer = require('../services/mailer')
+const { sendTicketEmail } = require('../services/ticketEmail')
 
 const MAX_SEATS_PER_BOOKING = 8
 const MAX_ACTIVE_HOLDS = 5
@@ -29,6 +31,8 @@ const present = (booking) => {
   const now = new Date()
   obj.canCancel = booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > now
   obj.canPay = booking.paymentStatus === 'pending' && !(booking.expiresAt <= now)
+  obj.emailEnabled = mailer.enabled()
+  delete obj.emailError // lỗi gửi mail chỉ để xem log, không cần cho khách
   return obj
 }
 
@@ -127,6 +131,21 @@ exports.getOne = wrap(async (req, res) => {
   if (!booking) return res.status(404).json(NOT_FOUND)
   if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(404).json(NOT_FOUND)
   res.json(present(booking))
+})
+
+// POST /api/bookings/:id/email -> gửi (lại) vé điện tử về email của chủ vé
+exports.sendEmail = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  if (!mailer.enabled()) return res.status(503).json({ message: 'Tính năng gửi vé qua email chưa được bật' })
+
+  const booking = await Booking.findOne({ _id: req.params.id, user: req.user.id }).select('paymentStatus')
+  if (!booking) return res.status(404).json(NOT_FOUND)
+  if (booking.paymentStatus !== 'paid') return res.status(409).json({ message: 'Chỉ gửi được vé đã thanh toán' })
+
+  const result = await sendTicketEmail(booking._id, { force: true })
+  if (result.status === 'sent') return res.json({ message: 'Đã gửi vé qua email', emailSentAt: result.sentAt })
+  if (result.status === 'no_email') return res.status(409).json({ message: 'Tài khoản của bạn chưa có email' })
+  res.status(502).json({ message: 'Chưa gửi được email, vui lòng thử lại sau' })
 })
 
 // POST /api/bookings/:id/cancel -> hủy vé và nhả ghế

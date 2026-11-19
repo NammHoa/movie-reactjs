@@ -52,3 +52,10 @@ Làm theo thứ tự: database -> server -> giao diện -> nối lại CORS.
 ### 4. Nối lại
 - Sau khi có địa chỉ Vercel, đặt nó vào `CLIENT_URL` trên Render (server tự khởi động lại).
 - Đổi `VITE_API_URL` thì phải Redeploy giao diện, vì biến này được ghi vào bản build.
+
+### 5. Gửi vé qua email (tùy chọn)
+Sau khi thanh toán thành công, khách nhận email có mã vé và ảnh QR đính kèm; trang vé có nút gửi lại.
+- Render bản miễn phí **chặn cổng SMTP** (25/465/587), nên dùng dịch vụ gửi qua HTTP. Dự án dùng [Brevo](https://www.brevo.com) (gói miễn phí 300 email/ngày).
+- Trong Brevo: *Settings → Senders* thêm và xác minh email người gửi, rồi *SMTP & API → API Keys* tạo khóa.
+- Biến môi trường trên Render: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `MAIL_FROM_EMAIL` (đúng email vừa xác minh), tùy chọn `MAIL_FROM_NAME`.
+- Không đặt `EMAIL_PROVIDER` thì tính năng tắt, nút gửi lại không hiện. Khi dev có thể đặt `EMAIL_PROVIDER=console` để chỉ ghi log, không gửi thật.

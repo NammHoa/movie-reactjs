@@ -63,6 +63,19 @@ function validateEnv(env = process.env) {
     errors.push(`PAYMENT_GATEWAY không hợp lệ: "${env.PAYMENT_GATEWAY}" (chỉ hỗ trợ mock hoặc vnpay).`)
   }
 
+  if (env.EMAIL_PROVIDER === 'brevo') {
+    if (!env.BREVO_API_KEY) errors.push('Thiếu BREVO_API_KEY (khóa API của Brevo).')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.MAIL_FROM_EMAIL || '')) {
+      errors.push('Thiếu hoặc sai MAIL_FROM_EMAIL: phải là địa chỉ email đã được xác minh làm người gửi trong Brevo.')
+    }
+  } else if (env.EMAIL_PROVIDER === 'console') {
+    if (production) warnings.push('EMAIL_PROVIDER=console chỉ ghi log và bị bỏ qua ở production: vé sẽ không được gửi qua email.')
+  } else if (env.EMAIL_PROVIDER) {
+    errors.push(`EMAIL_PROVIDER không hợp lệ: "${env.EMAIL_PROVIDER}" (chỉ hỗ trợ brevo hoặc console).`)
+  } else if (production) {
+    warnings.push('Chưa đặt EMAIL_PROVIDER: vé điện tử sẽ không được gửi qua email.')
+  }
+
   if (env.HOLD_MINUTES &&!(Number(env.HOLD_MINUTES) > 0)) {
     warnings.push(`HOLD_MINUTES không hợp lệ ("${env.HOLD_MINUTES}"), server sẽ dùng mặc định 10 phút.`)
   }

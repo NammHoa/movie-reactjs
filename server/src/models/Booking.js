@@ -11,6 +11,8 @@ const bookingSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired'], default: 'pending' },
     expiresAt: Date,
     paidAt: Date,
+    emailSentAt: Date, // vé điện tử đã được gửi qua email lúc nào; trống nghĩa là chưa gửi hoặc gửi lỗi
+    emailError: String,
     checkedInAt: Date, // thời điểm vào rạp (quét vé); có giá trị nghĩa là vé đã được dùng
     checkedInBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },

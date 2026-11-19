@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking')
 const Payment = require('../models/Payment')
 const { releaseExpired } = require('./bookingExpiry')
+const { queueTicketEmail } = require('./ticketEmail')
 
 const notPayableMessage = (booking) => {
   if (booking.paymentStatus === 'paid') return 'Đơn này đã được thanh toán'
@@ -36,6 +37,7 @@ async function settleSuccess(payment, details = {}) {
   }
 
   const done = await Payment.findOneAndUpdate({ _id: payment._id }, { status: 'success', paidAt: now }, { returnDocument: 'after' })
+  queueTicketEmail(paid._id)
   return { outcome: 'paid', payment: done, booking: paid }
 }
 
