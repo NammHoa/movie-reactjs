@@ -19,7 +19,10 @@ export const formatDateTime = (d) =>
 
 export const formatTime = (d) => new Date(d).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
-export const formatPrice = (p) => `${Number(p).toLocaleString('vi-VN')}đ`
+// "4.5" hoặc "4" (không in ".0")
+export const formatRating = (n) => String(Math.round(n * 10) / 10)
+
+export const formatPrice =(p) => `${Number(p).toLocaleString('vi-VN')}đ`
 
 // "2026-11-18" theo giờ máy người dùng
 export const dateKey = (d) => {

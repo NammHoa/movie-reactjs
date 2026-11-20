@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { STATUS_LABELS } from '../lib/movie'
+import { STATUS_LABELS, formatRating } from '../lib/movie'
 
 export function Poster({ src, alt, className = '' }) {
   const [broken, setBroken] = useState(false)
@@ -33,6 +33,13 @@ export default function MovieCard({ movie }) {
         <p className="mt-1 text-xs text-gray-500">
           {movie.duration} phút{movie.genres?.length ? ` • ${movie.genres.join(', ')}` : ''}
         </p>
+        {movie.ratingCount > 0 && (
+          <p className="mt-1 flex items-center gap-1 text-sm">
+            <span className="text-amber-400" aria-hidden="true">★</span>
+            <span className="font-semibold">{formatRating(movie.ratingAvg)}</span>
+            <span className="text-xs text-gray-400">({movie.ratingCount})</span>
+          </p>
+        )}
       </div>
     </Link>
   )
