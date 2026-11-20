@@ -57,6 +57,8 @@ const userKey = (req) => (req.user?.id ? `u:${req.user.id}` : ipKeyGenerator(req
 // Giữ ghế và thanh toán là các thao tác tốn tài nguyên và có thể bị lạm dụng để chiếm ghế nên giới hạn chặt hơn.
 const bookingCreateLimiter = limiter({ windowMs: 10 * MINUTE, limit: 10, key: userKey })
 const paymentLimiter = limiter({ windowMs: 10 * MINUTE, limit: 20, key: userKey })
+// Mỗi lần gọi là một email thật (có hạn mức gửi mỗi ngày), nên giới hạn chặt
+const emailLimiter = limiter({ windowMs: 10 * MINUTE, limit: 5, key: userKey })
 
 // Chặn đoán mật khẩu hiện tại bằng token bị lộ: chỉ đếm các lần nhập SAI mật khẩu hiện tại (403),
 // nhập mật khẩu mới sai định dạng không bị tính.
@@ -80,4 +82,5 @@ module.exports = {
   apiLimiter,
   bookingCreateLimiter,
   paymentLimiter,
+  emailLimiter,
 }

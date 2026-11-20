@@ -3,12 +3,26 @@ import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../../api/axios'
 import { Poster } from '../../components/MovieCard'
+import { useAuth } from '../../context/AuthContext'
+import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
 export default function Ticket() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [state, setState] = useState({ status: 'loading' }) // loading | ok | notfound | error
   const [now] = useState(() => Date.now())
+  const [mail, setMail] = useState({ busy: false, sentAt: null, error: '' })
+
+  const sendEmail = async () => {
+    setMail((m) => ({ ...m, busy: true, error: '' }))
+    try {
+      const { data } = await api.post(`/bookings/${id}/email`)
+      setMail({ busy: false, sentAt: data.emailSentAt, error: '' })
+    } catch (err) {
+      setMail((m) => ({ ...m, busy: false, error: errorMessage(err, 'Chưa gửi được email, vui lòng thử lại sau') }))
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +63,7 @@ export default function Ticket() {
   const ended = !!showtime && new Date(showtime.endTime).getTime() <= now
   const dimmed = checkedIn || ended
   const cinema = showtime?.room?.cinema
+  const sentAt = mail.sentAt ?? booking.emailSentAt
 
   return (
     <div className="mx-auto max-w-sm px-4 py-8">
@@ -95,6 +110,26 @@ export default function Ticket() {
           )}
         </div>
       </div>
+
+      {booking.emailEnabled && !dimmed && (
+        <div className="mt-4 rounded-2xl bg-white p-4 text-center text-sm shadow">
+          <p className="break-words text-gray-600">
+            {sentAt ? `Đã gửi vé tới ${user?.email ?? 'email của bạn'} lúc ${formatDateTime(sentAt)}` : 'Nhận vé này qua email để xem lại khi không có mạng.'}
+          </p>
+          {mail.error && (
+            <p role="alert" className="mt-2 rounded bg-red-50 px-3 py-2 text-red-600">
+              {mail.error}
+            </p>
+          )}
+          <button
+            onClick={sendEmail}
+            disabled={mail.busy}
+            className="mt-3 h-11 w-full rounded border border-brand font-semibold text-brand transition hover:bg-red-50 disabled:opacity-60"
+          >
+            {mail.busy ? 'Đang gửi...' : sentAt ? 'Gửi lại email' : 'Gửi vé về email'}
+          </button>
+        </div>
+      )}
 
       <Link to="/my-tickets" className="mt-5 block text-center text-sm text-gray-500 hover:text-brand">← Vé của tôi</Link>
     </div>
