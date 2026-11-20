@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { formatCountdown } from '../lib/errors'
 
 // Khung nền kem + thẻ trắng bo góc
@@ -29,6 +29,8 @@ const lineColor = (error) => (error ? 'border-red-500' : 'border-gray-400 focus-
 // Ô nhập kiểu gạch chân, nhãn nổi lên khi có chữ. type="password" có nút hiện/ẩn.
 export function Field({ label, error, type = 'text', ...props }) {
   const [show, setShow] = useState(false)
+  const autoId = useId()
+  const id = props.id ?? autoId
   const isPassword = type === 'password'
   const alwaysFloat = type === 'date'
 
@@ -37,11 +39,13 @@ export function Field({ label, error, type = 'text', ...props }) {
       <div className={`${lineBase} ${lineColor(error)}`}>
         <input
           {...props}
+          id={id}
           type={isPassword && show ? 'text' : type}
           placeholder=" "
           className="peer w-full bg-transparent pb-2 pt-6 pr-10 text-base outline-none"
         />
         <label
+          htmlFor={id}
           className={`pointer-events-none absolute left-0 origin-left transition-all ${
             alwaysFloat
               ? 'top-1 text-xs'
@@ -75,6 +79,7 @@ export function SelectField({ placeholder, options, error, disabled, ...props })
     <div>
       <div className={`${lineBase} ${lineColor(error)}`}>
         <select
+          aria-label={placeholder}
           {...props}
           disabled={disabled}
           className={`w-full appearance-none bg-transparent py-4 pr-8 text-base outline-none disabled:opacity-50 ${
