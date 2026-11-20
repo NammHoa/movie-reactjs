@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import { Poster } from '../../components/MovieCard'
-import { STATUS_LABELS, dateKey, dayLabel, formatDate, formatPrice, formatTime } from '../../lib/movie'
+import MovieReviews from '../../components/MovieReviews'
+import { Stars } from '../../components/Stars'
+import { STATUS_LABELS, dateKey, dayLabel, formatDate, formatPrice, formatRating, formatTime } from '../../lib/movie'
 
 export default function MovieDetail() {
   const { id } = useParams()
@@ -10,6 +12,7 @@ export default function MovieDetail() {
   const [showtimes, setShowtimes] = useState([])
   const [status, setStatus] = useState('loading') // loading | ok | notfound | error
   const [day, setDay] = useState(null)
+  const [rating, setRating] = useState(null) // { average, count }, cập nhật khi khách thêm/sửa/xóa đánh giá
 
   useEffect(() => {
     let cancelled = false
@@ -17,6 +20,7 @@ export default function MovieDetail() {
       .then(([m, s]) => {
         if (cancelled) return
         setMovie(m.data)
+        setRating({ average: m.data.ratingAvg ?? 0, count: m.data.ratingCount ?? 0 })
         setShowtimes(s.data)
         setStatus('ok')
       })
@@ -54,6 +58,13 @@ export default function MovieDetail() {
         <div>
           <span className="rounded bg-brand px-2 py-0.5 text-xs font-semibold text-white">{STATUS_LABELS[movie.status]}</span>
           <h1 className="mt-2 text-3xl font-bold">{movie.title}</h1>
+          {rating?.count > 0 && (
+            <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm hover:text-brand">
+              <Stars value={rating.average} className="text-lg" />
+              <span className="font-bold">{formatRating(rating.average)}</span>
+              <span className="text-gray-500">({rating.count} đánh giá)</span>
+            </a>
+          )}
           <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-sm">
             <dt className="text-gray-500">Thể loại</dt>
             <dd>{movie.genres?.join(', ') || '—'}</dd>
@@ -118,6 +129,11 @@ export default function MovieDetail() {
             </div>
           </>
         )}
+      </section>
+
+      <section id="reviews" className="mt-12 scroll-mt-20">
+        <h2 className="mb-4 border-l-4 border-brand pl-3 text-2xl font-bold">Đánh giá</h2>
+        <MovieReviews movieId={id} onSummary={setRating} />
       </section>
     </div>
   )
