@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const Movie = require('../models/Movie')
+const Review = require('../models/Review')
 const Showtime = require('../models/Showtime')
 const { serverError } = require('../utils/http')
 
@@ -109,6 +110,7 @@ exports.remove = async (req, res) => {
     }
     const movie = await Movie.findByIdAndDelete(req.params.id)
     if (!movie) return res.status(404).json({ message: 'Không tìm thấy phim' })
+    await Review.deleteMany({ movie: movie._id })
     res.json({ message: 'Đã xóa phim' })
   } catch (err) {
     serverError(res, err)
