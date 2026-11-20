@@ -39,7 +39,9 @@ Làm theo thứ tự: database -> server -> giao diện -> nối lại CORS.
 | `JWT_SECRET` | chuỗi ngẫu nhiên mới (Blueprint tự sinh), không dùng lại khóa ở máy |
 | `CLIENT_URL` | địa chỉ Vercel, ví dụ `https://ten-app.vercel.app` (không có `/` ở cuối) |
 | `TRUST_PROXY` | `1` |
-| `ALLOW_MOCK_PAYMENT` | `true` chỉ cho bản demo (thanh toán giả lập, không thu tiền) |
+| `PAYMENT_GATEWAY` | `vnpay` (cổng sandbox VNPay). Chỉ cho bản demo không thu tiền mới dùng thanh toán giả lập: bỏ biến này và đặt `ALLOW_MOCK_PAYMENT=true` |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET` | do VNPay cấp |
+| `SERVER_URL` | địa chỉ công khai của server Render, VNPay dùng để đưa khách quay về |
 
 - Tạo tài khoản admin: dùng tab Shell của Render hoặc chạy ở máy với `MONGO_URI` của Atlas: `npm run make-admin -- email@cua-ban.com`.
 - Bản miễn phí "ngủ" sau ~15 phút không có người dùng, request đầu tiên sẽ chậm.

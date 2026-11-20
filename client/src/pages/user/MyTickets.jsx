@@ -19,9 +19,10 @@ const isLapsed = (b, now) =>
 function statusOf(b, now) {
   if (b.paymentStatus === 'cancelled') return { label: 'Đã hủy', cls: 'bg-gray-200 text-gray-600' }
   if (b.paymentStatus === 'paid') {
-    return b.checkedInAt
-      ? { label: 'Đã sử dụng', cls: 'bg-gray-200 text-gray-600' }
-      : { label: 'Đã thanh toán', cls: 'bg-green-100 text-green-700' }
+    if (b.checkedInAt) return { label: 'Đã sử dụng', cls: 'bg-gray-200 text-gray-600' }
+    // Đã trả tiền nhưng không đến xem: suất đã kết thúc thì vé không còn dùng được
+    if (b.showtime && new Date(b.showtime.endTime).getTime() <= now) return { label: 'Đã hết hạn', cls: 'bg-gray-200 text-gray-600' }
+    return { label: 'Đã thanh toán', cls: 'bg-green-100 text-green-700' }
   }
   if (isLapsed(b, now)) return { label: 'Hết hạn thanh toán', cls: 'bg-gray-200 text-gray-600' }
   if (!b.showtime || new Date(b.showtime.startTime).getTime() <= now) {

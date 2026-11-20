@@ -161,6 +161,7 @@ export default function Showtimes() {
 
       <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
         <select
+          aria-label="Lọc theo phim"
           value={movieFilter}
           onChange={(e) => {
             setLoading(true)
