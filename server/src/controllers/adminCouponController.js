@@ -1,9 +1,8 @@
 const Coupon = require('../models/Coupon')
-const { statusOf } = require('../services/coupons')
+const { CODE_RE, statusOf } = require('../services/coupons')
 const { isId, wrap } = require('../utils/http')
 
 const NOT_FOUND = { message: 'Không tìm thấy mã giảm giá' }
-const CODE_RE = /^[A-Z0-9_-]{4,20}$/
 const MAX_MONEY = 10_000_000
 const MAX_LIMIT = 100
 

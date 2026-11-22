@@ -58,6 +58,8 @@ const userKey = (req) => (req.user?.id ? `u:${req.user.id}` : ipKeyGenerator(req
 const bookingCreateLimiter = limiter({ windowMs: 10 * MINUTE, limit: 10, key: userKey })
 const paymentLimiter = limiter({ windowMs: 10 * MINUTE, limit: 20, key: userKey })
 const reviewLimiter = limiter({ windowMs: 10 * MINUTE, limit: 20, key: userKey })
+// Báo giá có thể bị dùng để dò mã giảm giá, nên giới hạn theo tài khoản
+const quoteLimiter = limiter({ windowMs: 10 * MINUTE, limit: 30, key: userKey })
 // Mỗi lần gọi là một email thật (có hạn mức gửi mỗi ngày), nên giới hạn chặt
 const emailLimiter = limiter({ windowMs: 10 * MINUTE, limit: 5, key: userKey })
 
@@ -85,4 +87,5 @@ module.exports = {
   paymentLimiter,
   emailLimiter,
   reviewLimiter,
+  quoteLimiter,
 }
