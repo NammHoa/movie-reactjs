@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking')
 const Showtime = require('../models/Showtime')
+const { releaseForBooking } = require('./coupons')
 
 const HOLD_MINUTES = Number(process.env.HOLD_MINUTES) || 10
 const SWEEP_INTERVAL_MS = 30 * 1000
@@ -17,10 +18,11 @@ async function releaseExpired(filter = {}) {
     // một đơn không bao giờ vừa được trả tiền vừa bị nhả ghế.
     const won = await Booking.findOneAndUpdate(
       { _id: booking._id, paymentStatus: 'pending', expiresAt: { $lte: now } },
-      { paymentStatus: 'expired' },
+      { paymentStatus: 'expired', $unset: { couponHeld: 1 } },
     )
     if (!won) continue
     await Showtime.updateOne({ _id: booking.showtime }, { $pull: { bookedSeats: { $in: booking.seats } } })
+    await releaseForBooking(won)
     released++
   }
   return released

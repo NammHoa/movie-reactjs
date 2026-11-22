@@ -4,6 +4,7 @@ const Showtime = require('../models/Showtime')
 const User = require('../models/User')
 const { isId, wrap } = require('../utils/http')
 const { ADMIN_POPULATE: POPULATE } = require('../services/bookingView')
+const { releaseForBooking } = require('../services/coupons')
 
 const STATUSES = ['pending', 'paid', 'cancelled', 'expired']
 const MAX_LIMIT = 100
@@ -20,7 +21,7 @@ const intParam = (v, fallback, min, max) => {
   return n >= min && n <= max ? n : null
 }
 
-const present = (booking) => ({ ...booking, canCancel: booking.paymentStatus === 'pending' })
+const present = ({ couponHeld: _held, ...booking }) => ({ ...booking, subtotal: booking.subtotal ?? booking.totalPrice, canCancel: booking.paymentStatus === 'pending' })
 
 // GET /api/admin/bookings?status=paid&q=ABC&page=1&limit=20
 // q tìm theo mã đơn (đầu mã) hoặc theo tên / email / số điện thoại của người đặt.
@@ -84,12 +85,13 @@ exports.cancel = wrap(async (req, res) => {
   // nên không thể vừa bị hủy/nhả ghế vừa được tính là đã thanh toán.
   const cancelled = await Booking.findOneAndUpdate(
     { _id: booking._id, paymentStatus: 'pending' },
-    { paymentStatus: 'cancelled' },
+    { paymentStatus: 'cancelled', $unset: { couponHeld: 1 } },
     { returnDocument: 'after' },
   )
   if (!cancelled) return res.status(409).json({ message: 'Không thể hủy đơn này (trạng thái vừa thay đổi), vui lòng tải lại' })
 
   await Showtime.updateOne({ _id: booking.showtime }, { $pull: { bookedSeats: { $in: booking.seats } } })
+  await releaseForBooking(cancelled)
   const fresh = await Booking.findById(booking._id).populate(POPULATE).lean()
   res.json(present(fresh))
 })

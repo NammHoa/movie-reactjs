@@ -6,6 +6,7 @@ const { isValidSeat } = require('../utils/seats')
 const { newExpiry, releaseExpired } = require('../services/bookingExpiry')
 const mailer = require('../services/mailer')
 const { sendTicketEmail } = require('../services/ticketEmail')
+const coupons = require('../services/coupons')
 
 const MAX_SEATS_PER_BOOKING = 8
 const MAX_ACTIVE_HOLDS = 5
@@ -28,6 +29,9 @@ const POPULATE = {
 const present = (booking) => {
   const obj = booking.toObject()
   delete obj.checkedInBy // khách chỉ cần biết vé đã dùng lúc nào, không cần mã nội bộ của nhân viên soát vé
+  delete obj.coupon // chỉ để đối chiếu nội bộ, khách cần thấy couponCode
+  delete obj.couponHeld
+  obj.subtotal ??= obj.totalPrice // đơn tạo trước khi có mã giảm giá
   const now = new Date()
   obj.canCancel = booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > now
   obj.canPay = booking.paymentStatus === 'pending' && !(booking.expiresAt <= now)
@@ -48,7 +52,28 @@ function parseSeats(input) {
   return { seats }
 }
 
-// POST /api/bookings   { showtime, seats: ["A1","A2"] }
+const hasCoupon = (v) => v !== undefined && v !== null && v !== ''
+
+// POST /api/bookings/quote   { showtime, seats, coupon? } -> báo giá để khách xem trước, không giữ ghế hay mã
+exports.quote = wrap(async (req, res) => {
+  if (!isId(req.body.showtime)) return res.status(400).json({ message: 'Suất chiếu không hợp lệ' })
+  const { seats, error } = parseSeats(req.body.seats)
+  if (error) return res.status(400).json({ message: error })
+
+  const showtime = await Showtime.findById(req.body.showtime).select('price startTime')
+  if (!showtime) return res.status(404).json({ message: 'Suất chiếu không tồn tại' })
+  if (showtime.startTime <= new Date()) return res.status(400).json({ message: 'Suất chiếu đã bắt đầu, không thể đặt vé' })
+
+  const subtotal = showtime.price * seats.length
+  if (!hasCoupon(req.body.coupon)) return res.json({ subtotal, discount: 0, total: subtotal, coupon: null })
+
+  const applied = await coupons.evaluate(req.body.coupon, req.user.id, subtotal)
+  if (applied.error) return res.status(400).json({ message: applied.error, field: 'coupon' })
+  const { coupon, discount } = applied
+  res.json({ subtotal, discount, total: subtotal - discount, coupon: { code: coupon.code, type: coupon.type, value: coupon.value } })
+})
+
+// POST /api/bookings   { showtime, seats: ["A1","A2"], coupon?: "CODE" }
 exports.create = wrap(async (req, res) => {
   if (!isId(req.body.showtime)) return res.status(400).json({ message: 'Suất chiếu không hợp lệ' })
   const { seats, error } = parseSeats(req.body.seats)
@@ -73,6 +98,14 @@ exports.create = wrap(async (req, res) => {
     })
   }
 
+  // Kiểm tra mã trước khi giữ ghế, để mã sai không làm ghế bị giữ rồi nhả lại một cách vô ích
+  const subtotal = showtime.price * seats.length
+  let applied = null
+  if (hasCoupon(req.body.coupon)) {
+    applied = await coupons.evaluate(req.body.coupon, req.user.id, subtotal)
+    if (applied.error) return res.status(400).json({ message: applied.error, field: 'coupon' })
+  }
+
   // Giữ ghế bằng MỘT lệnh nguyên tử: chỉ thành công nếu KHÔNG ghế nào trong danh sách đã có người đặt.
   // Hai người bấm cùng lúc thì database xử lý lần lượt, người đến sau sẽ nhận null (không bao giờ bán trùng).
   const held = await Showtime.findOneAndUpdate(
@@ -91,7 +124,15 @@ exports.create = wrap(async (req, res) => {
     })
   }
 
-  // Tạo đơn. Nếu lỗi thì trả ghế lại để không bị "mất ghế".
+  const giveBackSeats = () => Showtime.updateOne({ _id: showtime._id }, { $pull: { bookedSeats: { $in: seats } } })
+
+  // Giữ lượt dùng mã (nguyên tử, kiểm tra lại giới hạn). Hết lượt giữa chừng thì trả ghế lại.
+  if (applied && !(await coupons.reserve(applied.coupon._id))) {
+    await giveBackSeats()
+    return res.status(400).json({ message: 'Mã giảm giá đã hết lượt sử dụng', field: 'coupon' })
+  }
+
+  // Tạo đơn. Nếu lỗi thì trả lại cả ghế lẫn lượt dùng mã để không bị "mất".
   try {
     let booking
     for (let attempt = 0; ; attempt++) {
@@ -102,18 +143,26 @@ exports.create = wrap(async (req, res) => {
           showtime: showtime._id,
           seats,
           pricePerSeat: showtime.price,
-          totalPrice: showtime.price * seats.length,
+          subtotal,
+          discount: applied?.discount ?? 0,
+          totalPrice: subtotal - (applied?.discount ?? 0),
+          ...(applied && { coupon: applied.coupon._id, couponCode: applied.coupon.code, couponHeld: true }),
           expiresAt: newExpiry(),
         })
         break
       } catch (err) {
-        if (err.code === 11000 && attempt < 3) continue // trùng mã (cực hiếm): thử mã khác
+        // Trùng mã vé (cực hiếm) thì thử mã khác; trùng chỉ mục (user, coupon) là người này đã dùng mã rồi nên không thử lại
+        if (err.code === 11000 && !err.keyPattern?.coupon && attempt < 3) continue
         throw err
       }
     }
-    res.status(201).json(await booking.populate(POPULATE))
+    res.status(201).json(present(await booking.populate(POPULATE)))
   } catch (err) {
-    await Showtime.updateOne({ _id: showtime._id }, { $pull: { bookedSeats: { $in: seats } } })
+    await giveBackSeats()
+    if (applied) await coupons.release(applied.coupon._id)
+    if (applied && err.code === 11000 && err.keyPattern?.coupon) {
+      return res.status(400).json({ message: 'Bạn đã dùng mã giảm giá này rồi', field: 'coupon' })
+    }
     throw err
   }
 })
@@ -167,11 +216,12 @@ exports.cancel = wrap(async (req, res) => {
   // thì chỉ MỘT request thắng và được phép nhả ghế (tránh nhả nhầm ghế đã được người khác đặt lại).
   const cancelled = await Booking.findOneAndUpdate(
     { _id: booking._id, paymentStatus: 'pending' },
-    { paymentStatus: 'cancelled' },
+    { paymentStatus: 'cancelled', $unset: { couponHeld: 1 } },
     { returnDocument: 'after' },
   )
   if (!cancelled) return res.status(409).json({ message: 'Không thể hủy vé này (trạng thái đã thay đổi)' })
 
   await Showtime.updateOne({ _id: booking.showtime._id }, { $pull: { bookedSeats: { $in: booking.seats } } })
+  await coupons.releaseForBooking(cancelled)
   res.json(present(await cancelled.populate(POPULATE)))
 })
