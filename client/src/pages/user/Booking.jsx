@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import Countdown from '../../components/Countdown'
@@ -60,6 +60,77 @@ export default function Booking() {
   const [booking, setBooking] = useState(null) // đơn vừa giữ ghế, chờ thanh toán
   const [holdOver, setHoldOver] = useState(false)
 
+  // Mã giảm giá: `code` là mã khách đã nhập; `quote` là báo giá của server cho đúng các ghế đang chọn
+  const [couponInput, setCouponInput] = useState('')
+  const [code, setCode] = useState(null)
+  const [quote, setQuote] = useState(null)
+  const [couponError, setCouponError] = useState('')
+  const [applying, setApplying] = useState(false)
+  const codeRef = useRef(null)
+  const quoteSeq = useRef(0) // chỉ nhận kết quả của lần báo giá mới nhất
+
+  const runQuote = useCallback(
+    async (couponCode, seats, initial = false) => {
+      const mine = ++quoteSeq.current
+      setApplying(true)
+      try {
+        const { data } = await api.post('/bookings/quote', { showtime: id, seats, coupon: couponCode })
+        if (mine !== quoteSeq.current) return
+        setQuote({ ...data, key: [...seats].sort().join(',') })
+        setCouponError('')
+      } catch (err) {
+        if (mine !== quoteSeq.current) return
+        setQuote(null)
+        setCouponError(errorMessage(err, 'Không thể kiểm tra mã giảm giá'))
+        // Mã vừa nhập bị từ chối thì quay về ô nhập (giữ chữ đã gõ) để sửa; mã đang áp dụng mà đổi ghế thì giữ lại để thử lại
+        if (initial) {
+          codeRef.current = null
+          setCode(null)
+        }
+      } finally {
+        if (mine === quoteSeq.current) setApplying(false)
+      }
+    },
+    [id],
+  )
+
+  const clearCoupon = () => {
+    quoteSeq.current++
+    codeRef.current = null
+    setCode(null)
+    setQuote(null)
+    setCouponError('')
+    setCouponInput('')
+    setApplying(false)
+  }
+
+  const applyCoupon = (e) => {
+    e.preventDefault()
+    const value = couponInput.trim().toUpperCase()
+    if (!value || selected.length === 0) return
+    codeRef.current = value
+    setCode(value)
+    runQuote(value, selected, true)
+  }
+
+  // Đổi ghế thì giảm giá có thể đổi (đơn tối thiểu, mức giảm theo %), nên hỏi lại server sau một nhịp để không gọi liên tục
+  useEffect(() => {
+    if (!codeRef.current) return
+    if (selected.length === 0) {
+      quoteSeq.current++
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQuote(null)
+      setCouponError('')
+      setApplying(false)
+      return
+    }
+    const timer = setTimeout(() => runQuote(codeRef.current, selected), 500)
+    return () => clearTimeout(timer)
+  }, [selected, runQuote])
+
+  // Báo giá chỉ có giá trị khi khớp đúng các ghế đang chọn (đổi ghế thì báo giá cũ phải bị bỏ qua)
+  const live = !!code && !!quote && quote.key === [...selected].sort().join(',')
+
   const load = useCallback(async () => {
     try {
       const res = await api.get(`/showtimes/${id}/seats`)
@@ -97,13 +168,20 @@ export default function Booking() {
     setError('')
     setSubmitting(true)
     try {
-      const res = await api.post('/bookings', { showtime: id, seats: selected })
+      const res = await api.post('/bookings', { showtime: id, seats: selected, coupon: live ? code : undefined })
       setBooking(res.data)
       setHoldOver(false)
       setSelected([])
+      clearCoupon()
       load()
     } catch (err) {
       const body = err.response?.data
+      if (body?.field === 'coupon') {
+        // Lỗi nằm ở mã (hết lượt, đã dùng...): báo ngay ô mã, ghế vẫn chưa bị giữ
+        setQuote(null)
+        setCouponError(body.message)
+        return
+      }
       setError(errorMessage(err, 'Không thể đặt vé, vui lòng thử lại'))
       if (err.response?.status === 409) {
         // Có người nhanh tay hơn: cập nhật sơ đồ và bỏ các ghế vừa hết
@@ -150,6 +228,14 @@ export default function Booking() {
               <dd>{formatDateTime(booking.showtime.startTime)}</dd>
               <dt className="text-gray-500">Ghế</dt>
               <dd className="font-semibold">{booking.seats.join(', ')}</dd>
+              {booking.discount > 0 && (
+                <>
+                  <dt className="text-gray-500">Tiền vé</dt>
+                  <dd>{formatPrice(booking.subtotal)}</dd>
+                  <dt className="text-gray-500">Giảm giá</dt>
+                  <dd className="text-green-700">−{formatPrice(booking.discount)} <span className="font-mono text-xs">({booking.couponCode})</span></dd>
+                </>
+              )}
               <dt className="text-gray-500">Tổng tiền</dt>
               <dd className="font-bold text-brand">{formatPrice(booking.totalPrice)}</dd>
               <dt className="text-gray-500">Trạng thái</dt>
@@ -187,7 +273,9 @@ export default function Booking() {
     )
   }
 
-  const total = selected.length * showtime.price
+  const subtotal = selected.length * showtime.price
+  const discount = live ? quote.discount : 0
+  const total = subtotal - discount
   const sorted = [...selected].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
 
   return (
@@ -235,11 +323,53 @@ export default function Booking() {
               <span className="text-gray-500">Giá mỗi ghế</span>
               <span>{formatPrice(showtime.price)}</span>
             </div>
+            {discount > 0 && (
+              <div className="mt-2 flex justify-between text-green-700">
+                <span>Giảm giá ({quote.coupon.code})</span>
+                <span>−{formatPrice(discount)}</span>
+              </div>
+            )}
             <div className="mt-3 flex justify-between border-t pt-3 text-base">
               <span className="font-semibold">Tổng tiền</span>
               <span className="font-bold text-brand">{formatPrice(total)}</span>
             </div>
           </div>
+
+          {user && !closed && (
+            <div className="mb-4">
+              {code ? (
+                <div className="flex items-center justify-between gap-2 rounded bg-gray-50 px-3 py-2 text-sm">
+                  <span className="min-w-0 break-words">
+                    Mã <b className="font-mono">{code}</b>
+                    {applying ? ' · đang kiểm tra...' : live ? ' · đã áp dụng' : selected.length === 0 && !couponError ? ' · chọn ghế để tính' : ''}
+                  </span>
+                  <button type="button" onClick={clearCoupon} className="shrink-0 py-1 font-semibold text-brand hover:underline">Bỏ mã</button>
+                </div>
+              ) : (
+                <form onSubmit={applyCoupon} className="flex gap-2">
+                  <label htmlFor="coupon-code" className="sr-only">Mã giảm giá</label>
+                  <input
+                    id="coupon-code"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    maxLength={20}
+                    placeholder="Mã giảm giá"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="h-10 min-w-0 flex-1 rounded border border-gray-300 px-3 font-mono text-base uppercase focus:border-gray-900 focus:outline-none"
+                  />
+                  <button
+                    disabled={!couponInput.trim() || selected.length === 0}
+                    className="h-10 shrink-0 rounded border border-brand px-4 text-sm font-bold text-brand transition hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-transparent"
+                  >
+                    Áp dụng
+                  </button>
+                </form>
+              )}
+              {!code && selected.length === 0 && couponInput.trim() && <p className="mt-1 text-xs text-gray-500">Chọn ghế trước khi áp dụng mã.</p>}
+              {couponError && <p role="alert" className="mt-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{couponError}</p>}
+            </div>
+          )}
 
           {notice && <p className="mb-3 text-sm text-amber-600">{notice}</p>}
           {error && <p className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -247,7 +377,7 @@ export default function Booking() {
           {user ? (
             <button
               onClick={submit}
-              disabled={selected.length === 0 || submitting || closed}
+              disabled={selected.length === 0 || submitting || closed || applying}
               className="h-12 w-full rounded bg-brand font-bold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
             >
               {submitting ? 'Đang xử lý...' : 'Đặt vé'}

@@ -43,6 +43,12 @@ function buildContent(booking) {
     ...(cinema?.address ? [['Địa chỉ', cinema.address]] : []),
     ['Suất chiếu', when],
     ['Ghế', seats],
+    ...(booking.discount > 0
+      ? [
+          ['Tiền vé', price(booking.subtotal ?? booking.totalPrice)],
+          ['Giảm giá', `−${price(booking.discount)} (${booking.couponCode})`],
+        ]
+      : []),
     ['Tổng tiền', price(booking.totalPrice)],
   ]
 

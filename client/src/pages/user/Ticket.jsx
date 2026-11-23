@@ -89,6 +89,9 @@ export default function Ticket() {
           <div>
             <dt className="text-gray-500">Tổng tiền</dt>
             <dd className="font-semibold">{formatPrice(booking.totalPrice)}</dd>
+            {booking.discount > 0 && (
+              <dd className="text-xs text-green-700">Đã giảm {formatPrice(booking.discount)} ({booking.couponCode})</dd>
+            )}
           </div>
         </dl>
 
