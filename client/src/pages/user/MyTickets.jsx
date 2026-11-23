@@ -56,6 +56,12 @@ function TicketCard({ booking, now, onCancel, onExpire, busy }) {
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-gray-500">Ghế</dt>
           <dd className="font-semibold">{booking.seats.join(', ')}</dd>
+          {booking.discount > 0 && (
+            <>
+              <dt className="text-gray-500">Giảm giá</dt>
+              <dd className="text-green-700">−{formatPrice(booking.discount)} <span className="font-mono text-xs">({booking.couponCode})</span></dd>
+            </>
+          )}
           <dt className="text-gray-500">Tổng tiền</dt>
           <dd className="font-bold text-brand">{formatPrice(booking.totalPrice)}</dd>
           <dt className="text-gray-500">Mã vé</dt>
