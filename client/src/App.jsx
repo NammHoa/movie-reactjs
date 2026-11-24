@@ -12,6 +12,7 @@ import Users from './pages/admin/Users'
 import Movies from './pages/admin/Movies'
 import Cinemas from './pages/admin/Cinemas'
 import Showtimes from './pages/admin/Showtimes'
+import Coupons from './pages/admin/Coupons'
 import MovieDetail from './pages/user/MovieDetail'
 import Booking from './pages/user/Booking'
 import MyTickets from './pages/user/MyTickets'
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="movies" element={<Movies />} />
           <Route path="cinemas" element={<Cinemas />} />
           <Route path="showtimes" element={<Showtimes />} />
+          <Route path="coupons" element={<Coupons />} />
         </Route>
       </Routes>
     </>

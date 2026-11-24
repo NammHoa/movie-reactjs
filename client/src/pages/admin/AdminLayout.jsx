@@ -8,6 +8,7 @@ const LINKS = [
   { to: '/admin/movies', label: 'Quản lý phim' },
   { to: '/admin/cinemas', label: 'Rạp & phòng chiếu' },
   { to: '/admin/showtimes', label: 'Suất chiếu' },
+  { to: '/admin/coupons', label: 'Mã giảm giá' },
 ]
 
 export default function AdminLayout() {
