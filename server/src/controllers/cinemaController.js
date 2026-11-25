@@ -2,6 +2,7 @@ const Cinema = require('../models/Cinema')
 const Room = require('../models/Room')
 const Showtime = require('../models/Showtime')
 const { str, isId, wrap } = require('../utils/http')
+const { releaseExpired } = require('../services/bookingExpiry')
 
 const NOT_FOUND = { message: 'Không tìm thấy rạp' }
 
@@ -16,8 +17,101 @@ function clean(body, partial = false) {
   return { data }
 }
 
+// GET /api/cinemas?withUpcoming=1: thêm số suất chiếu sắp tới của từng rạp (trang chọn rạp cần để biết rạp nào chưa có lịch)
 exports.list = wrap(async (req, res) => {
-  res.json(await Cinema.find().sort({ city: 1, name: 1 }))
+  const cinemas = await Cinema.find().sort({ city: 1, name: 1 }).lean()
+  if (req.query.withUpcoming !== '1') return res.json(cinemas)
+
+  const [rooms, perRoom] = await Promise.all([
+    Room.find().select('cinema').lean(),
+    Showtime.aggregate([{ $match: { startTime: { $gte: new Date() } } }, { $group: { _id: '$room', n: { $sum: 1 } } }]),
+  ])
+  const cinemaOfRoom = new Map(rooms.map((r) => [String(r._id), String(r.cinema)]))
+  const upcoming = new Map()
+  for (const { _id, n } of perRoom) {
+    const cinema = cinemaOfRoom.get(String(_id))
+    if (cinema) upcoming.set(cinema, (upcoming.get(cinema) ?? 0) + n)
+  }
+  res.json(cinemas.map((c) => ({ ...c, upcomingShowtimes: upcoming.get(String(c._id)) ?? 0 })))
+})
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const MAX_DATES = 30
+
+// Ngày (YYYY-MM-DD) theo giờ Việt Nam, đúng với cách trang lịch chiếu và API suất chiếu đang tính ngày
+const dayStart = (date) => new Date(`${date}T00:00:00+07:00`)
+
+// Ngày có thật trên lịch: JavaScript tự dồn "2026-02-30" thành 02/03, nên phải so lại từng phần
+function isRealDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [y, m, d] = value.split('-').map(Number)
+  const check = new Date(Date.UTC(y, m - 1, d))
+  return check.getUTCFullYear() === y && check.getUTCMonth() === m - 1 && check.getUTCDate() === d
+}
+
+// GET /api/cinemas/:id/schedule?date=YYYY-MM-DD
+// Trả về các ngày còn suất chiếu và, cho ngày được chọn (mặc định là ngày gần nhất), các phim kèm suất chiếu và số ghế trống.
+exports.schedule = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const cinema = await Cinema.findById(req.params.id).lean()
+  if (!cinema) return res.status(404).json(NOT_FOUND)
+
+  const wanted = req.query.date
+  if (wanted !== undefined && !isRealDate(wanted)) {
+    return res.status(400).json({ message: 'Ngày không hợp lệ (định dạng YYYY-MM-DD)' })
+  }
+
+  const rooms = await Room.find({ cinema: cinema._id }).select('name rows seatsPerRow').lean()
+  const roomIds = rooms.map((r) => r._id)
+  const now = new Date()
+
+  const dateRows = await Showtime.aggregate([
+    { $match: { room: { $in: roomIds }, startTime: { $gte: now } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$startTime', timezone: '+07:00' } } } },
+    { $sort: { _id: 1 } },
+    { $limit: MAX_DATES },
+  ])
+  const dates = dateRows.map((d) => d._id)
+  const date = wanted ?? dates[0] ?? null
+
+  let movies = []
+  if (date) {
+    const start = dayStart(date)
+    const from = start > now ? start : now
+    const showtimes = await Showtime.find({ room: { $in: roomIds }, startTime: { $gte: from, $lt: new Date(start.getTime() + DAY_MS) } })
+      .populate('movie', 'title poster duration genres status ratingAvg ratingCount')
+      .sort({ startTime: 1 })
+      .lean()
+
+    // Làm mới ghế giữ chỗ đã hết hạn để số ghế trống không bị thấp hơn thực tế
+    if (showtimes.length) await releaseExpired({ showtime: { $in: showtimes.map((s) => s._id) } })
+    const fresh = showtimes.length ? await Showtime.find({ _id: { $in: showtimes.map((s) => s._id) } }).select('bookedSeats').lean() : []
+    const booked = new Map(fresh.map((s) => [String(s._id), s.bookedSeats.length]))
+    const roomById = new Map(rooms.map((r) => [String(r._id), r]))
+
+    const byMovie = new Map()
+    for (const s of showtimes) {
+      const room = roomById.get(String(s.room))
+      if (!s.movie || !room) continue
+      const total = room.rows * room.seatsPerRow
+      const available = Math.max(0, total - (booked.get(String(s._id)) ?? s.bookedSeats.length))
+      const entry = byMovie.get(String(s.movie._id)) ?? { movie: s.movie, showtimes: [] }
+      entry.showtimes.push({
+        _id: s._id,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        price: s.price,
+        room: { _id: room._id, name: room.name },
+        total,
+        available,
+        soldOut: available === 0,
+      })
+      byMovie.set(String(s.movie._id), entry)
+    }
+    movies = [...byMovie.values()]
+  }
+
+  res.json({ cinema: { _id: cinema._id, name: cinema.name, address: cinema.address, city: cinema.city }, dates, date, movies })
 })
 
 exports.create = wrap(async (req, res) => {
