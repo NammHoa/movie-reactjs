@@ -11,6 +11,8 @@ export default function Navbar() {
           MOVIE<span className="text-gray-800">BOOKING</span>
         </Link>
         <nav className="ml-auto flex items-center gap-3 whitespace-nowrap text-xs font-medium sm:gap-5 sm:text-sm">
+          {/* Điện thoại không còn chỗ trên thanh này (sẽ xuống dòng), nên link nằm ở trang chủ */}
+          <Link to="/cinemas" className="hidden py-2 hover:text-brand sm:inline">Rạp chiếu</Link>
           {user?.role === 'admin' && (
             <Link to="/admin" className="py-2 hover:text-brand">Quản trị</Link>
           )}

@@ -109,7 +109,9 @@ export default function MovieDetail() {
             <div className="space-y-4">
               {Object.values(byCinema).map(({ cinema, items }) => (
                 <div key={cinema._id} className="rounded-lg bg-white p-4 shadow-sm">
-                  <h3 className="font-bold">{cinema.name}</h3>
+                  <h3 className="font-bold">
+                    <Link to={`/cinemas/${cinema._id}?date=${selected}`} className="hover:text-brand hover:underline">{cinema.name}</Link>
+                  </h3>
                   <p className="mb-3 text-sm text-gray-500">{[cinema.address, cinema.city].filter(Boolean).join(', ')}</p>
                   <div className="flex flex-wrap gap-3">
                     {items.map((s) => (

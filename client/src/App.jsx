@@ -14,6 +14,8 @@ import Cinemas from './pages/admin/Cinemas'
 import Showtimes from './pages/admin/Showtimes'
 import Coupons from './pages/admin/Coupons'
 import MovieDetail from './pages/user/MovieDetail'
+import CinemaList from './pages/user/Cinemas'
+import CinemaSchedule from './pages/user/CinemaSchedule'
 import Booking from './pages/user/Booking'
 import MyTickets from './pages/user/MyTickets'
 import Pay from './pages/user/Pay'
@@ -29,6 +31,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/movies/:id" element={<MovieDetail />} />
+        <Route path="/cinemas" element={<CinemaList />} />
+        <Route path="/cinemas/:id" element={<CinemaSchedule />} />
         <Route path="/booking/:id" element={<Booking />} />
         <Route
           path="/my-tickets"
