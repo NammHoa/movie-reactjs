@@ -141,4 +141,4 @@ function queueTicketEmail(bookingId) {
     .catch((err) => console.error('[mail] Lỗi gửi vé:', err.message))
 }
 
-module.exports = { sendTicketEmail, queueTicketEmail, buildContent }
+module.exports = { sendTicketEmail, queueTicketEmail, buildContent, esc, dateFmt, price, POPULATE }

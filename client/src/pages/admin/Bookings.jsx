@@ -12,6 +12,8 @@ const TABS = [
   { value: 'pending', label: 'Chờ thanh toán' },
   { value: 'cancelled', label: 'Đã hủy' },
   { value: 'expired', label: 'Hết hạn' },
+  { value: 'refunding', label: 'Đang hoàn tiền' },
+  { value: 'refunded', label: 'Đã hoàn tiền' },
 ]
 
 const STATUS = {
@@ -19,12 +21,14 @@ const STATUS = {
   pending: { label: 'Chờ thanh toán', cls: 'bg-amber-100 text-amber-700' },
   cancelled: { label: 'Đã hủy', cls: 'bg-gray-200 text-gray-600' },
   expired: { label: 'Hết hạn', cls: 'bg-gray-200 text-gray-500' },
+  refunding: { label: 'Đang hoàn tiền', cls: 'bg-amber-100 text-amber-700' },
+  refunded: { label: 'Đã hoàn tiền', cls: 'bg-gray-200 text-gray-600' },
 }
 
 const PAYMENT_STATUS = { pending: 'Chờ', processing: 'Đang xử lý', success: 'Thành công', failed: 'Thất bại' }
 
 function Badge({ status }) {
-  const s = STATUS[status]
+  const s = STATUS[status] ?? { label: status, cls: 'bg-gray-200 text-gray-600' }
   return <span className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold ${s.cls}`}>{s.label}</span>
 }
 

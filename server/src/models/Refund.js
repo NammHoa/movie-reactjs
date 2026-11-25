@@ -15,6 +15,7 @@ const refundSchema = new mongoose.Schema(
     completedAt: Date,
     gatewayRefNo: String,
     failReason: String,
+    emailSentAt: Date, // email xác nhận hoàn tiền đã gửi lúc nào; trống nghĩa là chưa gửi hoặc gửi lỗi
     requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },

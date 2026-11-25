@@ -16,6 +16,8 @@ const STATUS_ROWS = [
   { key: 'pending', label: 'Chờ thanh toán', dot: 'bg-amber-500' },
   { key: 'cancelled', label: 'Đã hủy', dot: 'bg-gray-400' },
   { key: 'expired', label: 'Hết hạn', dot: 'bg-gray-300' },
+  { key: 'refunding', label: 'Đang hoàn tiền', dot: 'bg-amber-300' },
+  { key: 'refunded', label: 'Đã hoàn tiền', dot: 'bg-gray-500' },
 ]
 
 const shortDate = (key) => `${key.slice(8, 10)}/${key.slice(5, 7)}`
