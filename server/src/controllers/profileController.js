@@ -20,6 +20,7 @@ const profileOf = (u) => ({
   city: u.city ?? '',
   district: u.district ?? '',
   address: u.address ?? '',
+  emailReminders: u.emailReminders !== false,
 })
 
 // GET /api/auth/profile
@@ -53,6 +54,11 @@ const parse = (body) => {
   if ('gender' in body) {
     if (!GENDERS.includes(body.gender)) return { error: 'Giới tính không hợp lệ' }
     update.gender = body.gender
+  }
+
+  if ('emailReminders' in body) {
+    if (typeof body.emailReminders !== 'boolean') return { error: 'Cài đặt nhận email nhắc không hợp lệ' }
+    update.emailReminders = body.emailReminders
   }
 
   // Địa chỉ không bắt buộc: gửi chuỗi rỗng để xóa

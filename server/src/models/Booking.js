@@ -22,6 +22,9 @@ const bookingSchema = new mongoose.Schema(
     paidAt: Date,
     emailSentAt: Date, // vé điện tử đã được gửi qua email lúc nào; trống nghĩa là chưa gửi hoặc gửi lỗi
     emailError: String,
+    reminderSentAt: Date, // email nhắc giờ chiếu đã gửi lúc nào; trống nghĩa là chưa gửi hoặc gửi lỗi
+    reminderAttempts: { type: Number, default: 0 }, // số lần đã thử, để vé có email hỏng không bị thử mãi
+    reminderError: String,
     checkedInAt: Date, // thời điểm vào rạp (quét vé); có giá trị nghĩa là vé đã được dùng
     checkedInBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },

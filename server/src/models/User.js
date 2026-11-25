@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
     district: String,
     address: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    emailReminders: { type: Boolean, default: true }, // nhận email nhắc giờ chiếu; tài khoản cũ chưa có trường này coi như bật
     passwordChangedAt: Date, // token cấp trước thời điểm này không còn dùng được
   },
   { timestamps: true },

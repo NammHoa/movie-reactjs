@@ -66,3 +66,11 @@ Sau khi thanh toán thành công, khách nhận email có mã vé và ảnh QR �
 - Khách tự hủy vé đã thanh toán được đến trước giờ chiếu `REFUND_CUTOFF_HOURS` giờ (mặc định 2), chưa quét vé, và được hoàn đúng số tiền đã trả. Admin hủy và hoàn được cho mọi vé chưa quét (mục *Đơn đặt vé*).
 - Mục **Hoàn tiền** của admin liệt kê các khoản chưa xong, cho thử lại hoặc đánh dấu "đã hoàn thủ công".
 - API hoàn tiền của VNPay cần VNPay bật cho tài khoản và thường đòi đăng ký IP của server (Render bản miễn phí không có IP cố định). Khi chưa dùng được, đặt `VNPAY_REFUND_API=off`: hệ thống không gọi VNPay mà đưa khoản hoàn sang "cần hoàn thủ công" (admin hoàn trên cổng VNPay rồi đánh dấu). Đặt `on` (mặc định) khi VNPay đã bật API.
+
+### 7. Nhắc giờ chiếu qua email
+- Trước giờ chiếu `REMINDER_HOURS` giờ (mặc định 3), khách có vé đã thanh toán (chưa quét, chưa hủy) nhận email nhắc kèm mã QR. Mỗi vé chỉ nhắc một lần; khách tắt được trong trang Hồ sơ. Cần đã bật gửi email (mục 5).
+- Render bản miễn phí "ngủ" nên không tự chạy việc định kỳ. Workflow `.github/workflows/reminders.yml` gọi `POST /api/internal/reminders` mỗi 15 phút (lời gọi cũng đánh thức server). Cách bật:
+  1. Trên Render đặt biến `CRON_SECRET` = một chuỗi ngẫu nhiên dài từ 24 ký tự.
+  2. Trên GitHub: *Settings → Secrets and variables → Actions → New repository secret*, tạo `CRON_SECRET` (cùng giá trị trên) và `API_URL` (địa chỉ server Render, không có `/api`, không có `/` ở cuối).
+  3. Vào tab *Actions → Showtime reminders → Run workflow* để chạy thử một lần.
+- Chưa đặt `CRON_SECRET` thì địa chỉ gọi từ ngoài bị tắt (trả 404), server chỉ còn bộ quét nội bộ chạy mỗi 5 phút khi đang thức.
