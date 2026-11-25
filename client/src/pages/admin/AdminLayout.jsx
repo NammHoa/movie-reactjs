@@ -4,6 +4,7 @@ const LINKS = [
   { to: '/admin', label: 'Tổng quan', end: true },
   { to: '/admin/bookings', label: 'Đơn đặt vé' },
   { to: '/admin/checkin', label: 'Soát vé' },
+  { to: '/admin/refunds', label: 'Hoàn tiền' },
   { to: '/admin/users', label: 'Người dùng' },
   { to: '/admin/movies', label: 'Quản lý phim' },
   { to: '/admin/cinemas', label: 'Rạp & phòng chiếu' },

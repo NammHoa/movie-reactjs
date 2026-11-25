@@ -5,6 +5,7 @@ const bookings = require('../controllers/adminBookingController')
 const tickets = require('../controllers/adminTicketController')
 const users = require('../controllers/adminUserController')
 const coupons = require('../controllers/adminCouponController')
+const refundsCtl = require('../controllers/adminRefundController')
 
 // Toàn bộ khu vực này chỉ dành cho admin
 router.use(verifyToken, isAdmin)
@@ -14,6 +15,11 @@ router.get('/stats', c.stats)
 router.get('/bookings', bookings.list)
 router.get('/bookings/:id', bookings.getOne)
 router.post('/bookings/:id/cancel', bookings.cancel)
+router.post('/bookings/:id/refund', bookings.refund)
+
+router.get('/refunds', refundsCtl.list)
+router.post('/refunds/:id/retry', refundsCtl.retry)
+router.post('/refunds/:id/resolve', refundsCtl.resolve)
 
 router.get('/users', users.list)
 router.patch('/users/:id/role', users.setRole)

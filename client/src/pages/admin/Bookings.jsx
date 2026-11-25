@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../../api/axios'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
+import RefundPanel from './RefundPanel'
 import { ErrorText, PageHeader, inputCls } from './ui'
 
 const LIMIT = 15
@@ -49,6 +50,7 @@ function DetailModal({ item, onClose, onChanged }) {
   const [tick, setTick] = useState(0)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -70,6 +72,23 @@ function DetailModal({ item, onClose, onChanged }) {
   const loaded = detail.id === item._id
   const b = loaded && detail.data ? detail.data : item
   const payments = loaded ? detail.data?.payments : null
+
+  const refund = async () => {
+    const msg = `Hủy vé ${b.code} và hoàn ${formatPrice(b.totalPrice)} cho khách?\n\nGhế được nhả, vé không dùng được nữa, khách nhận email xác nhận. Admin hủy được cả khi sát giờ chiếu. Thao tác này không thể hoàn tác.`
+    if (!window.confirm(msg)) return
+    setCancelling(true)
+    setError('')
+    try {
+      const { data } = await api.post(`/admin/bookings/${b._id}/refund`)
+      setNotice(data.message)
+    } catch (err) {
+      setError(errorMessage(err, 'Không thể hủy và hoàn tiền'))
+    } finally {
+      setCancelling(false)
+      setTick((t) => t + 1)
+      onChanged()
+    }
+  }
 
   const cancel = async () => {
     if (!window.confirm(`Hủy đơn ${b.code}? Ghế sẽ được nhả cho người khác.`)) return
@@ -132,6 +151,14 @@ function DetailModal({ item, onClose, onChanged }) {
           </ul>
         </div>
 
+        {loaded && detail.data?.refund && (
+          <div className="mt-5 border-t pt-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Hoàn tiền</p>
+            <RefundPanel refund={detail.data.refund} onChanged={() => { setTick((t) => t + 1); onChanged() }} />
+          </div>
+        )}
+
+        {notice && <p role="status" className="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{notice}</p>}
         <ErrorText message={error} />
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button onClick={onClose} className="h-10 rounded border border-gray-300 px-4 text-sm hover:bg-gray-100">Đóng</button>
@@ -140,10 +167,13 @@ function DetailModal({ item, onClose, onChanged }) {
               {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
             </button>
           )}
+          {b.paymentStatus === 'paid' && !b.checkedInAt && (
+            <button onClick={refund} disabled={cancelling} className="h-10 rounded bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60">
+              {cancelling ? 'Đang hủy...' : 'Hủy vé & hoàn tiền'}
+            </button>
+          )}
         </div>
-        {b.paymentStatus === 'paid' && (
-          <p className="mt-3 text-xs text-gray-400">Đơn đã thanh toán không hủy được tại đây vì cần hoàn tiền qua cổng thanh toán.</p>
-        )}
+        {b.paymentStatus === 'paid' && b.checkedInAt && <p className="mt-3 text-xs text-gray-400">Vé đã được sử dụng nên không hoàn tiền được.</p>}
       </div>
     </div>
   )
