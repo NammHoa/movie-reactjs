@@ -1,0 +1,27 @@
+name: Showtime reminders
+
+# Render bản miễn phí "ngủ" khi không có người dùng nên không tự chạy được việc định kỳ.
+# Workflow này gọi server mỗi 15 phút (lời gọi cũng đánh thức server) để gửi email nhắc giờ chiếu.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the reminder endpoint
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Chưa đặt secret API_URL hoặc CRON_SECRET trong Settings > Secrets and variables > Actions, bỏ qua."
+            exit 0
+          fi
+          curl -fsS -X POST --max-time 120 --retry 2 --retry-delay 15 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${API_URL%/}/api/internal/reminders"
+          echo

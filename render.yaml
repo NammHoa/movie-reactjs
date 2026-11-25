@@ -30,6 +30,8 @@ services:
         sync: false
       - key: MAIL_FROM_NAME
         value: Denim Cinema
+      - key: CRON_SECRET
+        sync: false # khóa cho GitHub Actions gọi việc nhắc giờ chiếu; cùng giá trị với secret CRON_SECRET trên GitHub
       - key: MONGO_URI
         sync: false
       - key: CLIENT_URL

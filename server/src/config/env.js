@@ -80,6 +80,13 @@ function validateEnv(env = process.env) {
     warnings.push('Chưa đặt EMAIL_PROVIDER: vé điện tử sẽ không được gửi qua email.')
   }
 
+  if (env.CRON_SECRET && env.CRON_SECRET.length < 24) {
+    errors.push(`CRON_SECRET quá ngắn (${env.CRON_SECRET.length} ký tự), cần ít nhất 24 ký tự ngẫu nhiên vì nó là khóa duy nhất bảo vệ địa chỉ gửi email nhắc.`)
+  }
+  if (env.REMINDER_HOURS && !(Number(env.REMINDER_HOURS) > 0 && Number(env.REMINDER_HOURS) <= 48)) {
+    warnings.push(`REMINDER_HOURS không hợp lệ ("${env.REMINDER_HOURS}", cần từ 0 đến 48), server sẽ dùng mặc định 3 giờ.`)
+  }
+
   if (env.HOLD_MINUTES &&!(Number(env.HOLD_MINUTES) > 0)) {
     warnings.push(`HOLD_MINUTES không hợp lệ ("${env.HOLD_MINUTES}"), server sẽ dùng mặc định 10 phút.`)
   }
