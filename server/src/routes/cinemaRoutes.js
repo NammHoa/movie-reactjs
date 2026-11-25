@@ -4,6 +4,7 @@ const c = require('../controllers/cinemaController')
 
 // Rạp: ai cũng xem được, chỉ admin được thêm / sửa / xóa
 router.get('/', c.list)
+router.get('/:id/schedule', c.schedule)
 router.post('/', verifyToken, isAdmin, c.create)
 router.put('/:id', verifyToken, isAdmin, c.update)
 router.delete('/:id', verifyToken, isAdmin, c.remove)
