@@ -61,3 +61,8 @@ Sau khi thanh toán thành công, khách nhận email có mã vé và ảnh QR �
 - Trong Brevo: *Settings → Senders* thêm và xác minh email người gửi, rồi *SMTP & API → API Keys* tạo khóa.
 - Biến môi trường trên Render: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `MAIL_FROM_EMAIL` (đúng email vừa xác minh), tùy chọn `MAIL_FROM_NAME`.
 - Không đặt `EMAIL_PROVIDER` thì tính năng tắt, nút gửi lại không hiện. Khi dev có thể đặt `EMAIL_PROVIDER=console` để chỉ ghi log, không gửi thật.
+
+### 6. Hủy vé và hoàn tiền
+- Khách tự hủy vé đã thanh toán được đến trước giờ chiếu `REFUND_CUTOFF_HOURS` giờ (mặc định 2), chưa quét vé, và được hoàn đúng số tiền đã trả. Admin hủy và hoàn được cho mọi vé chưa quét (mục *Đơn đặt vé*).
+- Mục **Hoàn tiền** của admin liệt kê các khoản chưa xong, cho thử lại hoặc đánh dấu "đã hoàn thủ công".
+- API hoàn tiền của VNPay cần VNPay bật cho tài khoản và thường đòi đăng ký IP của server (Render bản miễn phí không có IP cố định). Khi chưa dùng được, đặt `VNPAY_REFUND_API=off`: hệ thống không gọi VNPay mà đưa khoản hoàn sang "cần hoàn thủ công" (admin hoàn trên cổng VNPay rồi đánh dấu). Đặt `on` (mặc định) khi VNPay đã bật API.

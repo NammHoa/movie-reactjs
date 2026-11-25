@@ -63,6 +63,10 @@ function validateEnv(env = process.env) {
     errors.push(`PAYMENT_GATEWAY không hợp lệ: "${env.PAYMENT_GATEWAY}" (chỉ hỗ trợ mock hoặc vnpay).`)
   }
 
+  if (env.VNPAY_REFUND_API && !['on', 'off'].includes(env.VNPAY_REFUND_API.trim().toLowerCase())) {
+    errors.push(`VNPAY_REFUND_API không hợp lệ: "${env.VNPAY_REFUND_API}" (chỉ nhận on hoặc off).`)
+  }
+
   if (env.EMAIL_PROVIDER === 'brevo') {
     if (!env.BREVO_API_KEY) errors.push('Thiếu BREVO_API_KEY (khóa API của Brevo).')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.MAIL_FROM_EMAIL || '')) {

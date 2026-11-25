@@ -15,6 +15,7 @@ const PROVIDERS = { mock: 'Cổng giả lập', vnpay: 'VNPay' }
 // Lý do lỗi dạng dễ đọc cho người xử lý
 function failText(reason) {
   if (!reason) return ''
+  if (reason === 'manual_required') return 'Hoàn tiền tự động qua VNPay đang tắt, cần hoàn thủ công.'
   if (reason === 'timeout') return 'Quá 20 giây không nhận được phản hồi từ cổng thanh toán, chưa rõ tiền đã hoàn hay chưa.'
   if (reason === 'invalid_response') return 'Cổng thanh toán trả về dữ liệu không phải JSON hợp lệ (chi tiết nằm trong log của server), chưa rõ tiền đã hoàn hay chưa.'
   if (reason.startsWith('network_')) return `Không kết nối được tới cổng thanh toán (lỗi mạng ${reason.slice(8)}), chưa rõ tiền đã hoàn hay chưa.`
@@ -107,7 +108,13 @@ export default function RefundPanel({ refund, onChanged }) {
         {refund.note && (<><dt>Ghi chú</dt><dd className="break-words">{refund.note}</dd></>)}
       </dl>
 
-      {refund.failReason && <p className="mt-2 rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{failText(refund.failReason)}</p>}
+      {refund.manualOnly ? (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+          Hoàn tiền tự động qua VNPay đang tắt. Hãy hoàn {formatPrice(refund.amount)} trực tiếp trên cổng VNPay, rồi bấm "Đánh dấu đã hoàn thủ công" để ghi nhận và gửi email xác nhận cho khách.
+        </p>
+      ) : (
+        refund.failReason && <p className="mt-2 rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{failText(refund.failReason)}</p>
+      )}
       {refund.unknownOutcome && (
         <p className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
           Hãy kiểm tra giao dịch trên cổng VNPay trước khi thử lại. Nếu đã hoàn rồi, chọn "Đánh dấu đã hoàn thủ công" để tránh hoàn hai lần.

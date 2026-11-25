@@ -20,6 +20,8 @@ services:
         sync: false
       - key: SERVER_URL
         sync: false
+      - key: VNPAY_REFUND_API
+        value: "off" # sandbox chưa bật API hoàn tiền: hoàn thủ công trong mục Hoàn tiền; đổi thành "on" khi VNPay đã bật
       - key: EMAIL_PROVIDER
         value: brevo
       - key: BREVO_API_KEY

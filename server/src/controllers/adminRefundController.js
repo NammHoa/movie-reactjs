@@ -2,6 +2,7 @@ const Booking = require('../models/Booking')
 const Refund = require('../models/Refund')
 const { isId, wrap } = require('../utils/http')
 const refunds = require('../services/refunds')
+const vnpay = require('../services/vnpay')
 
 const NOT_FOUND = { message: 'Không tìm thấy khoản hoàn tiền' }
 const OPEN = ['pending', 'processing', 'failed'] // khoản chưa xong
@@ -29,17 +30,23 @@ const intParam = (v, fallback, min, max) => {
 const isStale = (r, now = new Date()) => r.status === 'processing' && r.lastAttemptAt && now - new Date(r.lastAttemptAt) > refunds.STALE_MS
 
 // Cho admin xem đủ chi tiết kể cả lý do lỗi và mã tham chiếu của cổng thanh toán
+// Cổng này có đang tắt hoàn tiền tự động không (khi đó chỉ còn cách hoàn thủ công)
+const autoOff = (r) => r.provider === 'vnpay' && !vnpay.refundApiEnabled()
+
 function present(refund) {
   const r = refund.toObject ? refund.toObject() : refund
   const open = OPEN.includes(r.status)
   const stale = isStale(r)
+  const manualOnly = open && autoOff(r)
   return {
     ...r,
     __v: undefined,
     stale,
-    // pending = chưa rõ cổng đã hoàn hay chưa: thử lại có thể bị cổng từ chối vì trùng, nên giao diện cần cảnh báo
-    unknownOutcome: r.status === 'pending' && !!r.failReason,
-    canRetry: r.status === 'pending' || r.status === 'failed' || stale,
+    manualOnly,
+    // pending kèm lý do lỗi = chưa rõ cổng đã hoàn hay chưa: thử lại có thể bị cổng từ chối vì trùng, nên giao diện cần cảnh báo.
+    // Riêng "manual_required" là do ta chủ động không gọi cổng, nên không có gì chưa rõ.
+    unknownOutcome: r.status === 'pending' && !!r.failReason && r.failReason !== refunds.MANUAL_REQUIRED,
+    canRetry: !manualOnly && (r.status === 'pending' || r.status === 'failed' || stale),
     canResolve: open && (r.status !== 'processing' || stale),
   }
 }
@@ -80,6 +87,7 @@ exports.list = wrap(async (req, res) => {
     total,
     pages: Math.ceil(total / limit),
     counts: { open: counts.pending + counts.processing + counts.failed, success: counts.success, all: counts.pending + counts.processing + counts.failed + counts.success },
+    autoRefund: { vnpay: vnpay.refundApiEnabled() },
   })
 })
 
@@ -92,6 +100,9 @@ exports.retry = wrap(async (req, res) => {
   const refund = await findOne(req.params.id)
   if (!refund) return res.status(404).json(NOT_FOUND)
   if (refund.status === 'success') return res.status(409).json({ message: 'Khoản này đã hoàn xong' })
+  if (autoOff(refund)) {
+    return res.status(409).json({ message: 'Hoàn tiền tự động qua VNPay đang tắt (VNPAY_REFUND_API=off). Hãy hoàn trực tiếp trên cổng VNPay rồi bấm "Đánh dấu đã hoàn thủ công".' })
+  }
 
   const result = await refunds.executeRefund(refund._id, { ip: req.ip, createBy: req.account.email })
   const fresh = await Refund.findById(refund._id).populate(POPULATE)
