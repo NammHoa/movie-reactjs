@@ -45,6 +45,12 @@ function blockReason(booking, { admin = false, now = new Date() } = {}) {
 const summary = (refund) =>
   refund ? { status: refund.status === 'success' ? 'success' : 'processing', amount: refund.amount, requestedAt: refund.createdAt, completedAt: refund.completedAt ?? null } : null
 
+// Một khoản đang "processing" quá lâu là do server bị tắt giữa chừng khi đang gọi cổng thanh toán; lúc đó cho phép xử lý lại
+const STALE_MS = 5 * 60 * 1000
+const claimable = (now = new Date()) => ({
+  $or: [{ status: { $in: ['pending', 'failed'] } }, { status: 'processing', lastAttemptAt: { $lt: new Date(now.getTime() - STALE_MS) } }],
+})
+
 // Gọi cổng thanh toán cho một khoản hoàn tiền. Dùng cho lần hoàn đầu tiên và cho việc thử lại sau này.
 // "Giành" khoản hoàn bằng một lệnh nguyên tử (pending/failed -> processing): chỉ một lần gọi chạy tại một thời điểm,
 // nên hai request cùng lúc hay bấm thử lại liên tục cũng không gửi hai yêu cầu hoàn tiền.
@@ -52,7 +58,7 @@ const summary = (refund) =>
 async function executeRefund(refundId, { ip, createBy } = {}) {
   const now = new Date()
   const claimed = await Refund.findOneAndUpdate(
-    { _id: refundId, status: { $in: ['pending', 'failed'] } },
+    { _id: refundId, ...claimable(now) },
     { status: 'processing', lastAttemptAt: now, $inc: { attempts: 1 }, $unset: { failReason: 1 } },
     { returnDocument: 'after' },
   )
@@ -82,6 +88,19 @@ async function executeRefund(refundId, { ip, createBy } = {}) {
   const refund = await Refund.findOneAndUpdate({ _id: claimed._id }, { status: failed ? 'failed' : 'pending', failReason: result.reason }, { returnDocument: 'after' })
   console.warn(`[refund] ${failed ? 'Cổng từ chối' : 'Chưa rõ kết quả'} hoàn tiền đơn ${claimed.booking}: ${result.reason}`)
   return { outcome: failed ? 'failed' : 'pending', refund }
+}
+
+// Admin xác nhận đã hoàn tiền bằng cách khác (trực tiếp trên cổng thanh toán, chuyển khoản...). Chỉ làm được với khoản chưa xong
+// và không đang được gọi dở (cùng điều kiện "giành" như executeRefund), nên không thể vừa tự động vừa thủ công cùng lúc.
+async function resolveManually(refundId, admin, { reference, note } = {}) {
+  const set = { status: 'success', manual: true, resolvedBy: admin.id, completedAt: new Date() }
+  if (reference) set.gatewayRefNo = reference
+  if (note) set.note = note
+  const refund = await Refund.findOneAndUpdate({ _id: refundId, ...claimable() }, { ...set, $unset: { failReason: 1 } }, { returnDocument: 'after' })
+  if (!refund) return { outcome: 'conflict', refund: await Refund.findById(refundId) }
+  await Booking.updateOne({ _id: refund.booking, paymentStatus: 'refunding' }, { paymentStatus: 'refunded', refundedAt: new Date() })
+  queueRefundEmail(refund._id)
+  return { outcome: 'success', refund }
 }
 
 // Hủy vé đã thanh toán và hoàn tiền. booking phải có showtime (startTime). actor = { id, role }.
@@ -118,4 +137,4 @@ async function requestRefund(booking, actor, ip) {
   return executeRefund(refund._id, { ip, createBy: actor.email ?? String(actor.id) })
 }
 
-module.exports = { CUTOFF_HOURS, refundDeadline, userCanRefund, blockReason, summary, executeRefund, requestRefund }
+module.exports = { CUTOFF_HOURS, STALE_MS, refundDeadline, userCanRefund, blockReason, summary, executeRefund, resolveManually, requestRefund }

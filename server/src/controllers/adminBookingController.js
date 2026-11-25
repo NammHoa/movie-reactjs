@@ -5,6 +5,9 @@ const User = require('../models/User')
 const { isId, wrap } = require('../utils/http')
 const { ADMIN_POPULATE: POPULATE } = require('../services/bookingView')
 const { releaseForBooking } = require('../services/coupons')
+const Refund = require('../models/Refund')
+const refunds = require('../services/refunds')
+const refundView = require('./adminRefundController')
 
 const STATUSES = ['pending', 'paid', 'cancelled', 'expired', 'refunding', 'refunded']
 const MAX_LIMIT = 100
@@ -64,7 +67,26 @@ exports.getOne = wrap(async (req, res) => {
   const booking = await Booking.findById(req.params.id).populate(POPULATE).lean()
   if (!booking) return res.status(404).json(NOT_FOUND)
   const payments = await Payment.find({ booking: booking._id }).sort({ createdAt: -1 }).select('-user').lean()
-  res.json({ ...present(booking), payments })
+  const refund = await Refund.findOne({ booking: booking._id }).populate(refundView.POPULATE.filter((p) => p.path !== 'booking'))
+  res.json({ ...present(booking), payments, refund: refund ? refundView.present(refund) : null })
+})
+
+// POST /api/admin/bookings/:id/refund -> hủy vé ĐÃ thanh toán và hoàn tiền cho khách (không bị giới hạn 2 giờ như khách tự hủy)
+exports.refund = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const booking = await Booking.findById(req.params.id).populate('showtime', 'startTime')
+  if (!booking) return res.status(404).json(NOT_FOUND)
+
+  const result = await refunds.requestRefund(booking, { id: req.user.id, role: 'admin', email: req.account.email }, req.ip)
+  if (result.error) return res.status(result.error.status).json({ message: result.error.message })
+
+  const fresh = await Booking.findById(booking._id).populate(POPULATE).lean()
+  const refund = await Refund.findById(result.refund._id).populate(refundView.POPULATE.filter((p) => p.path !== 'booking'))
+  const done = result.outcome === 'success'
+  res.status(done ? 200 : 202).json({
+    message: done ? 'Đã hủy vé và hoàn tiền cho khách' : 'Đã hủy vé. Khoản hoàn tiền chưa hoàn tất, xem ở mục Hoàn tiền để thử lại hoặc đánh dấu hoàn thủ công.',
+    booking: { ...present(fresh), refund: refundView.present(refund) },
+  })
 })
 
 // POST /api/admin/bookings/:id/cancel -> hủy đơn CHƯA thanh toán và nhả ghế
