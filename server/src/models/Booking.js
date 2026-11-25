@@ -13,7 +13,11 @@ const bookingSchema = new mongoose.Schema(
     coupon: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon' },
     couponCode: String, // lưu lại để vẫn hiển thị đúng dù mã sau này bị sửa
     couponHeld: Boolean, // true khi đơn đang giữ một lượt dùng mã (đơn chờ thanh toán hoặc đã thanh toán)
-    paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired'], default: 'pending' },
+    // refunding: khách đã hủy vé đã thanh toán, đang hoàn tiền; refunded: đã hoàn tiền xong (cả hai đều là vé đã hủy)
+    paymentStatus: { type: String, enum: ['pending', 'paid', 'cancelled', 'expired', 'refunding', 'refunded'], default: 'pending' },
+    cancelledAt: Date, // lúc hủy vé đã thanh toán
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    refundedAt: Date,
     expiresAt: Date,
     paidAt: Date,
     emailSentAt: Date, // vé điện tử đã được gửi qua email lúc nào; trống nghĩa là chưa gửi hoặc gửi lỗi

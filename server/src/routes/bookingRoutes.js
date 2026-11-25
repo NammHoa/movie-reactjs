@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const { verifyToken } = require('../middleware/auth')
-const { bookingCreateLimiter, emailLimiter, quoteLimiter } = require('../middleware/rateLimit')
+const { bookingCreateLimiter, emailLimiter, quoteLimiter, refundLimiter } = require('../middleware/rateLimit')
 const c = require('../controllers/bookingController')
 
 // Tất cả đều phải đăng nhập
@@ -10,5 +10,6 @@ router.get('/mine', verifyToken, c.mine) // phải đặt trước '/:id' để 
 router.get('/:id', verifyToken, c.getOne)
 router.post('/:id/cancel', verifyToken, c.cancel)
 router.post('/:id/email', verifyToken, emailLimiter, c.sendEmail)
+router.post('/:id/refund', verifyToken, refundLimiter, c.refund)
 
 module.exports = router

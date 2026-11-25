@@ -25,6 +25,7 @@ async function applyResult(query) {
   const details = {}
   if (query.vnp_TransactionNo) details.gatewayTxnNo = query.vnp_TransactionNo
   if (query.vnp_BankCode) details.bankCode = query.vnp_BankCode
+  if (/^\d{14}$/.test(query.vnp_PayDate ?? '')) details.gatewayPayDate = query.vnp_PayDate
 
   // Chỉ coi là thành công khi cả hai mã đều là 00 (mẫu của VNPay dùng "hoặc", lỏng hơn mức cần thiết).
   if (query.vnp_ResponseCode === '00' && query.vnp_TransactionStatus === '00') {

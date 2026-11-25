@@ -68,4 +68,59 @@ function verify(query) {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual)
 }
 
-module.exports = { buildPayUrl, verify, signData, encode, vnTime, returnUrl }
+const REFUND_URL = 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'
+const REFUND_TIMEOUT_MS = 20 * 1000
+
+// Chữ ký của API hoàn tiền: các trường ghép bằng "|" theo đúng thứ tự VNPay quy định (khác chữ ký của đường dẫn thanh toán).
+const REQUEST_FIELDS = ['vnp_RequestId', 'vnp_Version', 'vnp_Command', 'vnp_TmnCode', 'vnp_TransactionType', 'vnp_TxnRef', 'vnp_Amount', 'vnp_TransactionNo', 'vnp_TransactionDate', 'vnp_CreateBy', 'vnp_CreateDate', 'vnp_IpAddr', 'vnp_OrderInfo']
+const RESPONSE_FIELDS = ['vnp_ResponseId', 'vnp_Command', 'vnp_ResponseCode', 'vnp_Message', 'vnp_TmnCode', 'vnp_TxnRef', 'vnp_Amount', 'vnp_BankCode', 'vnp_PayDate', 'vnp_TransactionNo', 'vnp_TransactionType', 'vnp_TransactionStatus', 'vnp_OrderInfo', 'vnp_PromotionCode', 'vnp_PromotionAmount']
+const joinFields = (fields, data) => fields.map((k) => data[k] ?? '').join('|')
+
+// Gọi API hoàn tiền toàn phần (loại 02). Trả về:
+//   { status: 'success', refNo }    VNPay nhận yêu cầu hoàn tiền (mã 00)
+//   { status: 'rejected', reason }  VNPay từ chối rõ ràng (mã khác 00): chưa hoàn, có thể thử lại sau khi sửa nguyên nhân
+//   { status: 'unknown', reason }   không có phản hồi đáng tin (mạng, lỗi máy chủ, chữ ký sai): KHÔNG biết tiền đã hoàn hay chưa
+async function refund({ payment, booking, amount, createBy, ip, now = new Date() }) {
+  const { tmnCode } = cfg()
+  const payDate = payment.gatewayPayDate || (payment.paidAt ? vnTime(payment.paidAt) : '')
+  const body = {
+    vnp_RequestId: crypto.randomBytes(16).toString('hex'),
+    vnp_Version: '2.1.0',
+    vnp_Command: 'refund',
+    vnp_TmnCode: tmnCode,
+    vnp_TransactionType: '02',
+    vnp_TxnRef: payment.txnRef,
+    vnp_Amount: String(Math.round(amount * 100)),
+    vnp_OrderInfo: `Hoan tien ve ${booking.code}`,
+    vnp_TransactionNo: payment.gatewayTxnNo || '0',
+    vnp_TransactionDate: payDate,
+    vnp_CreateDate: vnTime(now),
+    vnp_CreateBy: String(createBy || 'system').slice(0, 50),
+    vnp_IpAddr: ip || '127.0.0.1',
+  }
+  body.vnp_SecureHash = hmac(joinFields(REQUEST_FIELDS, body))
+
+  let data
+  try {
+    const res = await fetch(process.env.VNPAY_REFUND_URL || REFUND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REFUND_TIMEOUT_MS),
+    })
+    if (!res.ok) return { status: 'unknown', reason: `http_${res.status}` }
+    data = await res.json()
+  } catch {
+    return { status: 'unknown', reason: 'gateway_no_response' }
+  }
+
+  // Không tin phản hồi nếu chữ ký không khớp
+  const expected = Buffer.from(hmac(joinFields(RESPONSE_FIELDS, data ?? {})))
+  const actual = Buffer.from(String(data?.vnp_SecureHash ?? '').toLowerCase())
+  if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return { status: 'unknown', reason: 'bad_signature' }
+
+  if (data.vnp_ResponseCode === '00') return { status: 'success', refNo: data.vnp_TransactionNo || data.vnp_ResponseId }
+  return { status: 'rejected', reason: `vnpay_${data.vnp_ResponseCode}` }
+}
+
+module.exports = { buildPayUrl, verify, refund, signData, encode, vnTime, returnUrl }
