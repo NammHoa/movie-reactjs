@@ -3,6 +3,7 @@ const Payment = require('../models/Payment')
 const Refund = require('../models/Refund')
 const Showtime = require('../models/Showtime')
 const vnpay = require('./vnpay')
+const { queueRefundEmail } = require('./refundEmail')
 
 const envHours = process.env.REFUND_CUTOFF_HOURS
 // Khách tự hủy được đến trước giờ chiếu bao lâu (mặc định 2 giờ); admin không bị giới hạn này
@@ -72,6 +73,7 @@ async function executeRefund(refundId, { ip, createBy } = {}) {
   if (result.status === 'success') {
     const refund = await Refund.findOneAndUpdate({ _id: claimed._id }, { status: 'success', completedAt: new Date(), gatewayRefNo: result.refNo }, { returnDocument: 'after' })
     await Booking.updateOne({ _id: claimed.booking, paymentStatus: 'refunding' }, { paymentStatus: 'refunded', refundedAt: new Date() })
+    queueRefundEmail(claimed._id)
     return { outcome: 'success', refund }
   }
 

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../../api/axios'
 import { Poster } from '../../components/MovieCard'
+import RefundButton, { RefundInfo } from '../../components/RefundButton'
 import { useAuth } from '../../context/AuthContext'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
@@ -13,6 +14,7 @@ export default function Ticket() {
   const [state, setState] = useState({ status: 'loading' }) // loading | ok | notfound | error
   const [now] = useState(() => Date.now())
   const [mail, setMail] = useState({ busy: false, sentAt: null, error: '' })
+  const [refundNotice, setRefundNotice] = useState('')
 
   const sendEmail = async () => {
     setMail((m) => ({ ...m, busy: true, error: '' }))
@@ -47,6 +49,19 @@ export default function Ticket() {
 
   const { booking } = state
   const { showtime } = booking
+
+  if (booking.paymentStatus === 'refunding' || booking.paymentStatus === 'refunded') {
+    return (
+      <div className="mx-auto max-w-lg space-y-3 px-4 py-10 text-center">
+        {refundNotice && <p role="status" className="rounded bg-green-50 p-4 text-sm text-green-700">{refundNotice}</p>}
+        <p className="rounded bg-gray-100 p-4 text-sm text-gray-700">
+          Vé này đã được hủy nên không còn dùng được để vào rạp. Mã vé: <span className="font-mono font-bold tracking-widest">{booking.code}</span>
+        </p>
+        <RefundInfo refund={booking.refund} />
+        <Link to="/my-tickets" className="inline-block pt-2 font-semibold text-brand hover:underline">← Vé của tôi</Link>
+      </div>
+    )
+  }
 
   if (booking.paymentStatus !== 'paid') {
     return (
@@ -131,6 +146,12 @@ export default function Ticket() {
           >
             {mail.busy ? 'Đang gửi...' : sentAt ? 'Gửi lại email' : 'Gửi vé về email'}
           </button>
+        </div>
+      )}
+
+      {!checkedIn && (
+        <div className="mt-4 rounded-2xl bg-white p-4 text-center text-sm shadow empty:hidden">
+          <RefundButton booking={booking} now={now} onDone={(updated, message) => { setRefundNotice(message); setState({ status: 'ok', booking: updated }) }} />
         </div>
       )}
 

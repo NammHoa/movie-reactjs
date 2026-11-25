@@ -4,6 +4,7 @@ import api from '../../api/axios'
 import Countdown from '../../components/Countdown'
 import { Poster } from '../../components/MovieCard'
 import PayButton from '../../components/PayButton'
+import RefundButton, { RefundInfo } from '../../components/RefundButton'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 
@@ -18,6 +19,8 @@ const isLapsed = (b, now) =>
 
 function statusOf(b, now) {
   if (b.paymentStatus === 'cancelled') return { label: 'Đã hủy', cls: 'bg-gray-200 text-gray-600' }
+  if (b.paymentStatus === 'refunding') return { label: 'Đang hoàn tiền', cls: 'bg-amber-100 text-amber-700' }
+  if (b.paymentStatus === 'refunded') return { label: 'Đã hoàn tiền', cls: 'bg-gray-200 text-gray-600' }
   if (b.paymentStatus === 'paid') {
     if (b.checkedInAt) return { label: 'Đã sử dụng', cls: 'bg-gray-200 text-gray-600' }
     // Đã trả tiền nhưng không đến xem: suất đã kết thúc thì vé không còn dùng được
@@ -32,10 +35,11 @@ function statusOf(b, now) {
 }
 
 // Vé đã quét ở cửa rạp thì thuộc về lịch sử
+const CLOSED = ['cancelled', 'refunding', 'refunded']
 const isUpcoming = (b, now) =>
-  b.paymentStatus !== 'cancelled' && !b.checkedInAt && !isLapsed(b, now) && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
+  !CLOSED.includes(b.paymentStatus) && !b.checkedInAt && !isLapsed(b, now) && !!b.showtime && new Date(b.showtime.endTime).getTime() > now
 
-function TicketCard({ booking, now, onCancel, onExpire, busy }) {
+function TicketCard({ booking, now, onCancel, onExpire, onRefunded, busy }) {
   const { showtime } = booking
   const status = statusOf(booking, now)
   const cinema = showtime?.room?.cinema
@@ -93,6 +97,10 @@ function TicketCard({ booking, now, onCancel, onExpire, busy }) {
             </button>
           )}
         </div>
+        <div className="mt-3 space-y-2">
+          <RefundButton booking={booking} now={now} onDone={onRefunded} />
+          <RefundInfo refund={booking.refund} />
+        </div>
       </div>
     </article>
   )
@@ -104,6 +112,7 @@ export default function MyTickets() {
   const [tab, setTab] = useState('upcoming')
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -131,6 +140,12 @@ export default function MyTickets() {
     }
   }
 
+  const refunded = (booking, message) => {
+    setBookings((list) => list.map((x) => (x._id === booking._id ? booking : x)))
+    setNotice(message)
+    setError('')
+  }
+
   const shown = (bookings ?? []).filter((b) => (tab === 'upcoming') === isUpcoming(b, now))
 
   return (
@@ -151,6 +166,7 @@ export default function MyTickets() {
         ))}
       </div>
 
+      {notice && <p role="status" className="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{notice}</p>}
       {error && <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {bookings === null && !error && <p className="text-gray-500">Đang tải...</p>}
 
@@ -167,7 +183,7 @@ export default function MyTickets() {
 
       <div className="space-y-4">
         {shown.map((b) => (
-          <TicketCard key={b._id} booking={b} now={now} onCancel={cancel} onExpire={() => setNow(Date.now())} busy={busyId === b._id} />
+          <TicketCard key={b._id} booking={b} now={now} onCancel={cancel} onExpire={() => setNow(Date.now())} onRefunded={refunded} busy={busyId === b._id} />
         ))}
       </div>
     </div>
