@@ -45,6 +45,8 @@ function blockReason(booking, { admin = false, now = new Date() } = {}) {
 const summary = (refund) =>
   refund ? { status: refund.status === 'success' ? 'success' : 'processing', amount: refund.amount, requestedAt: refund.createdAt, completedAt: refund.completedAt ?? null } : null
 
+const MANUAL_REQUIRED = 'manual_required' // lý do ghi trên khoản hoàn khi API hoàn tiền tự động đang tắt
+
 // Một khoản đang "processing" quá lâu là do server bị tắt giữa chừng khi đang gọi cổng thanh toán; lúc đó cho phép xử lý lại
 const STALE_MS = 5 * 60 * 1000
 const claimable = (now = new Date()) => ({
@@ -57,6 +59,15 @@ const claimable = (now = new Date()) => ({
 // Trả về { outcome: 'success' | 'failed' | 'pending' | 'busy', refund }
 async function executeRefund(refundId, { ip, createBy } = {}) {
   const now = new Date()
+
+  // Đã tắt API hoàn tiền của VNPay: không gọi cổng, ghi lại để admin hoàn thủ công. Không tính là một lần gọi.
+  const current = await Refund.findById(refundId)
+  if (current && current.provider === 'vnpay' && !vnpay.refundApiEnabled() && current.status !== 'success') {
+    const refund = await Refund.findOneAndUpdate({ _id: refundId, status: { $in: ['pending', 'failed'] } }, { status: 'pending', failReason: MANUAL_REQUIRED }, { returnDocument: 'after' })
+    if (refund && current.failReason !== MANUAL_REQUIRED) console.warn(`[refund] VNPAY_REFUND_API=off: đơn ${refund.booking} cần hoàn ${refund.amount}đ thủ công trên cổng VNPay rồi đánh dấu trong mục Hoàn tiền`)
+    return { outcome: 'manual', refund: refund ?? current }
+  }
+
   const claimed = await Refund.findOneAndUpdate(
     { _id: refundId, ...claimable(now) },
     { status: 'processing', lastAttemptAt: now, $inc: { attempts: 1 }, $unset: { failReason: 1 } },
@@ -137,4 +148,4 @@ async function requestRefund(booking, actor, ip) {
   return executeRefund(refund._id, { ip, createBy: actor.email ?? String(actor.id) })
 }
 
-module.exports = { CUTOFF_HOURS, STALE_MS, refundDeadline, userCanRefund, blockReason, summary, executeRefund, resolveManually, requestRefund }
+module.exports = { CUTOFF_HOURS, STALE_MS, MANUAL_REQUIRED, refundDeadline, userCanRefund, blockReason, summary, executeRefund, resolveManually, requestRefund }

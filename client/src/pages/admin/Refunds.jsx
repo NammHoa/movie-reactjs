@@ -81,6 +81,11 @@ export default function Refunds() {
       </div>
 
       <ErrorText message={error} />
+      {data?.autoRefund?.vnpay === false && (
+        <p className="mb-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Hoàn tiền tự động qua VNPay đang tắt. Các khoản VNPay cần được hoàn trực tiếp trên cổng VNPay, rồi đánh dấu "đã hoàn thủ công" tại đây.
+        </p>
+      )}
       {!data && !error && <p className="text-gray-500">Đang tải...</p>}
 
       {data && (

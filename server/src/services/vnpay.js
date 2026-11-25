@@ -68,6 +68,10 @@ function verify(query) {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual)
 }
 
+// VNPAY_REFUND_API=off: không gọi API hoàn tiền của VNPay (tài khoản chưa được bật API hoặc chưa đăng ký IP), khoản hoàn
+// chuyển thẳng sang chế độ hoàn thủ công. Mặc định bật.
+const refundApiEnabled = () => String(process.env.VNPAY_REFUND_API || 'on').trim().toLowerCase() !== 'off'
+
 const REFUND_URL = 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'
 const REFUND_TIMEOUT_MS = 20 * 1000
 
@@ -140,4 +144,4 @@ async function refund({ payment, booking, amount, createBy, ip, now = new Date()
   return { status: 'rejected', reason: `vnpay_${data.vnp_ResponseCode}` }
 }
 
-module.exports = { buildPayUrl, verify, refund, signData, encode, vnTime, returnUrl }
+module.exports = { buildPayUrl, verify, refund, refundApiEnabled, signData, encode, vnTime, returnUrl }

@@ -84,7 +84,11 @@ exports.refund = wrap(async (req, res) => {
   const refund = await Refund.findById(result.refund._id).populate(refundView.POPULATE.filter((p) => p.path !== 'booking'))
   const done = result.outcome === 'success'
   res.status(done ? 200 : 202).json({
-    message: done ? 'Đã hủy vé và hoàn tiền cho khách' : 'Đã hủy vé. Khoản hoàn tiền chưa hoàn tất, xem ở mục Hoàn tiền để thử lại hoặc đánh dấu hoàn thủ công.',
+    message: done
+      ? 'Đã hủy vé và hoàn tiền cho khách'
+      : result.outcome === 'manual'
+        ? 'Đã hủy vé. Hoàn tiền tự động qua VNPay đang tắt: hãy hoàn trực tiếp trên cổng VNPay rồi đánh dấu "đã hoàn thủ công" ở mục Hoàn tiền.'
+        : 'Đã hủy vé. Khoản hoàn tiền chưa hoàn tất, xem ở mục Hoàn tiền để thử lại hoặc đánh dấu hoàn thủ công.',
     booking: { ...present(fresh), refund: refundView.present(refund) },
   })
 })
