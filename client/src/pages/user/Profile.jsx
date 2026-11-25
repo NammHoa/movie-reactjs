@@ -150,6 +150,58 @@ function InfoForm({ profile, onSaved }) {
   )
 }
 
+// Công tắc bật/tắt email nhắc giờ chiếu: lưu ngay khi gạt, lỗi thì trả về trạng thái cũ
+function ReminderSwitch({ profile }) {
+  const [on, setOn] = useState(profile.emailReminders !== false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState('')
+
+  const toggle = async () => {
+    const next = !on
+    setOn(next)
+    setBusy(true)
+    setError('')
+    setSaved('')
+    try {
+      await api.patch('/auth/profile', { emailReminders: next })
+      setSaved(next ? 'Đã bật email nhắc giờ chiếu.' : 'Đã tắt email nhắc giờ chiếu.')
+    } catch (err) {
+      setOn(!next)
+      setError(errorMessage(err, 'Không thể lưu cài đặt'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p id="reminder-label" className="font-medium">Email nhắc giờ chiếu</p>
+          <p id="reminder-hint" className="mt-0.5 break-words text-sm text-gray-500">
+            Nhận email vài giờ trước suất chiếu, kèm mã QR, gửi tới {profile.email}.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-labelledby="reminder-label"
+          aria-describedby="reminder-hint"
+          onClick={toggle}
+          disabled={busy}
+          className={`relative h-8 w-14 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-brand' : 'bg-gray-300'}`}
+        >
+          <span className={`absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : ''}`} />
+        </button>
+      </div>
+      <FormError message={error} />
+      <Success>{saved}</Success>
+    </div>
+  )
+}
+
 const emptyPw = { current: '', next: '', confirm: '' }
 
 function PasswordForm() {
@@ -253,6 +305,9 @@ export default function Profile() {
         <>
           <Card title="Thông tin cá nhân">
             <InfoForm profile={profile} onSaved={onSaved} />
+          </Card>
+          <Card title="Thông báo">
+            <ReminderSwitch profile={profile} />
           </Card>
           <Card title="Đổi mật khẩu" hint="Sau khi đổi, các thiết bị khác sẽ bị đăng xuất.">
             <PasswordForm />
