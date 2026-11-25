@@ -100,24 +100,41 @@ async function refund({ payment, booking, amount, createBy, ip, now = new Date()
   }
   body.vnp_SecureHash = hmac(joinFields(REQUEST_FIELDS, body))
 
-  let data
+  // Mọi trường hợp "chưa rõ kết quả" đều ghi log kèm nguyên nhân và thời gian chờ để còn biết đường sửa (không ghi khóa hay chữ ký)
+  const startedAt = Date.now()
+  const unknown = (reason, detail = '') => {
+    console.warn(`[vnpay] Hoàn tiền ${payment.txnRef}: ${reason} sau ${Date.now() - startedAt}ms${detail ? ` - ${detail}` : ''}`)
+    return { status: 'unknown', reason }
+  }
+
+  let res, text
   try {
-    const res = await fetch(process.env.VNPAY_REFUND_URL || REFUND_URL, {
+    res = await fetch(process.env.VNPAY_REFUND_URL || REFUND_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(REFUND_TIMEOUT_MS),
     })
-    if (!res.ok) return { status: 'unknown', reason: `http_${res.status}` }
-    data = await res.json()
+    text = await res.text()
+  } catch (err) {
+    if (err?.name === 'TimeoutError') return unknown('timeout', `quá ${REFUND_TIMEOUT_MS / 1000} giây không có phản hồi`)
+    const code = err?.cause?.code ?? err?.code ?? err?.name ?? 'error'
+    return unknown(`network_${code}`, String(err?.cause?.message ?? err?.message ?? '').slice(0, 150))
+  }
+
+  const snippet = text.replace(/\s+/g, ' ').slice(0, 300)
+  if (!res.ok) return unknown(`http_${res.status}`, snippet)
+  let data
+  try {
+    data = JSON.parse(text)
   } catch {
-    return { status: 'unknown', reason: 'gateway_no_response' }
+    return unknown('invalid_response', `HTTP ${res.status}, ${res.headers?.get?.('content-type') ?? 'không có content-type'}: ${snippet || '(rỗng)'}`)
   }
 
   // Không tin phản hồi nếu chữ ký không khớp
   const expected = Buffer.from(hmac(joinFields(RESPONSE_FIELDS, data ?? {})))
   const actual = Buffer.from(String(data?.vnp_SecureHash ?? '').toLowerCase())
-  if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return { status: 'unknown', reason: 'bad_signature' }
+  if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return unknown('bad_signature', `mã phản hồi: ${String(data?.vnp_ResponseCode ?? '?').slice(0, 10)}`)
 
   if (data.vnp_ResponseCode === '00') return { status: 'success', refNo: data.vnp_TransactionNo || data.vnp_ResponseId }
   return { status: 'rejected', reason: `vnpay_${data.vnp_ResponseCode}` }

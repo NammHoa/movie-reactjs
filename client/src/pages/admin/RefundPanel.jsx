@@ -15,6 +15,9 @@ const PROVIDERS = { mock: 'Cổng giả lập', vnpay: 'VNPay' }
 // Lý do lỗi dạng dễ đọc cho người xử lý
 function failText(reason) {
   if (!reason) return ''
+  if (reason === 'timeout') return 'Quá 20 giây không nhận được phản hồi từ cổng thanh toán, chưa rõ tiền đã hoàn hay chưa.'
+  if (reason === 'invalid_response') return 'Cổng thanh toán trả về dữ liệu không phải JSON hợp lệ (chi tiết nằm trong log của server), chưa rõ tiền đã hoàn hay chưa.'
+  if (reason.startsWith('network_')) return `Không kết nối được tới cổng thanh toán (lỗi mạng ${reason.slice(8)}), chưa rõ tiền đã hoàn hay chưa.`
   if (reason === 'gateway_no_response') return 'Không nhận được phản hồi từ cổng thanh toán, chưa rõ tiền đã hoàn hay chưa.'
   if (reason === 'bad_signature') return 'Phản hồi từ cổng thanh toán có chữ ký không hợp lệ nên không được tin, chưa rõ tiền đã hoàn hay chưa.'
   if (reason.startsWith('http_')) return `Cổng thanh toán trả lỗi ${reason.slice(5)}, chưa rõ tiền đã hoàn hay chưa.`
