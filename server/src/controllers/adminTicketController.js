@@ -12,6 +12,7 @@ const POPULATE = [...ADMIN_POPULATE, { path: 'checkedInBy', select: 'name' }]
 function judge(booking, now) {
   const s = booking.paymentStatus
   if (s === 'cancelled') return { status: 'cancelled', message: 'Vé đã bị hủy' }
+  if (s === 'refunding' || s === 'refunded') return { status: 'cancelled', message: 'Vé đã được hủy và hoàn tiền, không có hiệu lực' }
   if (s === 'expired') return { status: 'unpaid', message: 'Đơn đã hết hạn thanh toán, vé không có hiệu lực' }
   if (s === 'pending') return { status: 'unpaid', message: 'Đơn chưa thanh toán, vé không có hiệu lực' }
   if (booking.checkedInAt) return { status: 'used', message: 'Vé này đã được sử dụng' }

@@ -7,6 +7,8 @@ const { newExpiry, releaseExpired } = require('../services/bookingExpiry')
 const mailer = require('../services/mailer')
 const { sendTicketEmail } = require('../services/ticketEmail')
 const coupons = require('../services/coupons')
+const refunds = require('../services/refunds')
+const Refund = require('../models/Refund')
 
 const MAX_SEATS_PER_BOOKING = 8
 const MAX_ACTIVE_HOLDS = 5
@@ -35,6 +37,9 @@ const present = (booking) => {
   const now = new Date()
   obj.canCancel = booking.paymentStatus === 'pending' && !!booking.showtime?.startTime && booking.showtime.startTime > now
   obj.canPay = booking.paymentStatus === 'pending' && !(booking.expiresAt <= now)
+  obj.canRefund = refunds.userCanRefund(booking, now) // vé đã thanh toán còn trong hạn hủy và chưa dùng
+  obj.refundDeadline = booking.paymentStatus === 'paid' ? refunds.refundDeadline(booking.showtime) : null
+  delete obj.cancelledBy
   obj.emailEnabled = mailer.enabled()
   delete obj.emailError // lỗi gửi mail chỉ để xem log, không cần cho khách
   return obj
@@ -167,10 +172,17 @@ exports.create = wrap(async (req, res) => {
   }
 })
 
+// present + thông tin hoàn tiền (chỉ vé đã hủy sau khi thanh toán mới có), lấy bằng một truy vấn cho cả danh sách
+async function presentWithRefunds(bookings) {
+  const ids = bookings.filter((b) => b.paymentStatus === 'refunding' || b.paymentStatus === 'refunded').map((b) => b._id)
+  const byBooking = new Map((ids.length ? await Refund.find({ booking: { $in: ids } }) : []).map((r) => [String(r.booking), r]))
+  return bookings.map((b) => ({ ...present(b), refund: refunds.summary(byBooking.get(String(b._id))) }))
+}
+
 // GET /api/bookings/mine -> vé của tôi (mới nhất trước)
 exports.mine = wrap(async (req, res) => {
   const bookings = await Booking.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(100).populate(POPULATE)
-  res.json(bookings.map(present))
+  res.json(await presentWithRefunds(bookings))
 })
 
 // GET /api/bookings/:id -> chi tiết một vé (chủ vé hoặc admin; người khác thấy như "không tồn tại")
@@ -179,7 +191,25 @@ exports.getOne = wrap(async (req, res) => {
   const booking = await Booking.findById(req.params.id).populate(POPULATE)
   if (!booking) return res.status(404).json(NOT_FOUND)
   if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(404).json(NOT_FOUND)
-  res.json(present(booking))
+  res.json((await presentWithRefunds([booking]))[0])
+})
+
+// POST /api/bookings/:id/refund -> khách hủy vé đã thanh toán và nhận lại tiền
+exports.refund = wrap(async (req, res) => {
+  if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
+  const booking = await Booking.findOne({ _id: req.params.id, user: req.user.id }).populate(POPULATE)
+  if (!booking) return res.status(404).json(NOT_FOUND)
+
+  const result = await refunds.requestRefund(booking, { id: req.user.id, role: req.user.role, email: req.account.email }, req.ip)
+  if (result.error) return res.status(result.error.status).json({ message: result.error.message })
+
+  const fresh = await Booking.findById(booking._id).populate(POPULATE)
+  const done = result.outcome === 'success'
+  // 200: đã hoàn xong. 202: vé đã hủy và ghế đã nhả, nhưng cổng thanh toán chưa xác nhận nên tiền đang được xử lý
+  res.status(done ? 200 : 202).json({
+    message: done ? 'Đã hủy vé và hoàn tiền' : 'Đã hủy vé. Khoản hoàn tiền đang được xử lý, bạn sẽ nhận lại tiền sau khi hoàn tất.',
+    booking: (await presentWithRefunds([fresh]))[0],
+  })
 })
 
 // POST /api/bookings/:id/email -> gửi (lại) vé điện tử về email của chủ vé
@@ -205,8 +235,11 @@ exports.cancel = wrap(async (req, res) => {
 
   if (booking.paymentStatus === 'cancelled') return res.status(409).json({ message: 'Vé này đã được hủy trước đó' })
   if (booking.paymentStatus === 'expired') return res.status(409).json({ message: 'Đơn đã hết hạn thanh toán và được hủy tự động' })
+  if (booking.paymentStatus === 'refunding' || booking.paymentStatus === 'refunded') {
+    return res.status(409).json({ message: 'Vé này đã được hủy và đang hoàn tiền hoặc đã hoàn tiền' })
+  }
   if (booking.paymentStatus === 'paid') {
-    return res.status(409).json({ message: 'Vé đã thanh toán, không thể tự hủy. Vui lòng liên hệ rạp để được hỗ trợ.' })
+    return res.status(409).json({ message: 'Vé đã thanh toán, hãy dùng chức năng hủy vé và hoàn tiền.' })
   }
   if (!booking.showtime || booking.showtime.startTime <= new Date()) {
     return res.status(409).json({ message: 'Suất chiếu đã bắt đầu, không thể hủy vé' })

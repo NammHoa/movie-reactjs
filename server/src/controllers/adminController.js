@@ -8,7 +8,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000 // Việt Nam UTC+7, không có giờ mùa hè
 const VN_TZ = '+07:00'
 const MAX_DAYS = 365
-const STATUSES = ['pending', 'paid', 'cancelled', 'expired']
+const STATUSES = ['pending', 'paid', 'cancelled', 'expired', 'refunding', 'refunded']
 const TOP_MOVIES = 5
 
 // "2026-11-17" theo ngày của Việt Nam

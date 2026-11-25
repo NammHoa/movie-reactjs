@@ -10,6 +10,7 @@ const paymentSchema = new mongoose.Schema(
     status: { type: String, enum: ['pending', 'processing', 'success', 'failed'], default: 'pending' },
     failReason: String,
     gatewayTxnNo: String, // mã giao dịch phía cổng thanh toán (VNPay: vnp_TransactionNo), dùng khi đối soát/hoàn tiền
+    gatewayPayDate: String, // ngày giờ giao dịch do VNPay trả về (vnp_PayDate, yyyyMMddHHmmss); VNPay đòi đúng giá trị này khi hoàn tiền
     bankCode: String,
     paidAt: Date,
   },

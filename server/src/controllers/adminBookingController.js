@@ -6,7 +6,7 @@ const { isId, wrap } = require('../utils/http')
 const { ADMIN_POPULATE: POPULATE } = require('../services/bookingView')
 const { releaseForBooking } = require('../services/coupons')
 
-const STATUSES = ['pending', 'paid', 'cancelled', 'expired']
+const STATUSES = ['pending', 'paid', 'cancelled', 'expired', 'refunding', 'refunded']
 const MAX_LIMIT = 100
 const MAX_QUERY = 50
 const NOT_FOUND = { message: 'Không tìm thấy đơn' }
@@ -78,6 +78,8 @@ exports.cancel = wrap(async (req, res) => {
     paid: 'Đơn đã thanh toán, không thể hủy tại đây (cần hoàn tiền qua cổng thanh toán)',
     cancelled: 'Đơn này đã được hủy trước đó',
     expired: 'Đơn đã hết hạn thanh toán và được hủy tự động',
+    refunding: 'Vé này đã được hủy và đang hoàn tiền',
+    refunded: 'Vé này đã được hủy và hoàn tiền',
   }
   if (messages[booking.paymentStatus]) return res.status(409).json({ message: messages[booking.paymentStatus] })
 
