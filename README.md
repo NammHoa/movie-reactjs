@@ -12,7 +12,8 @@ Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Re
 
 **Khách hàng**
 - Đăng ký, đăng nhập bằng số điện thoại hoặc email; phiên đăng nhập tự gia hạn (access token ngắn hạn + refresh token xoay vòng).
-- Xem phim đang chiếu và sắp chiếu, trang chi tiết có trailer, lịch chiếu theo ngày và rạp.
+- Trang chủ: banner phim nổi bật (khách tự bấm hoặc vuốt, không tự trượt), bảng Box Office 7 phim bán nhiều vé nhất trong 7 ngày gần nhất, hàng poster phim đang chiếu và sắp chiếu.
+- Trang chi tiết phim: trailer ở đầu trang, nhãn độ tuổi, thông tin phim (quốc gia, định dạng, ngày khởi chiếu...), lịch chiếu theo ngày và rạp.
 - Chọn theo rạp: danh sách rạp theo thành phố, lịch chiếu từng ngày, số ghế còn trống của mỗi suất.
 - Đánh giá và nhận xét phim (chỉ người đã xem, một đánh giá mỗi phim), điểm trung bình trên thẻ phim.
 - Đặt vé: sơ đồ ghế theo thời gian thực, tối đa 8 ghế mỗi đơn, giữ ghế 10 phút để thanh toán.
@@ -28,6 +29,7 @@ Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Re
 - Đơn đặt vé: tìm kiếm, lọc, xem lịch sử thanh toán, hủy đơn chưa thanh toán, hủy và hoàn tiền đơn đã thanh toán.
 - Soát vé tại rạp: quét mã QR bằng camera hoặc nhập mã, mỗi vé chỉ vào được một lần.
 - Hoàn tiền: danh sách khoản chưa xong, thử lại, đánh dấu hoàn thủ công.
+- Banner trang chủ: chọn tối đa 8 phim đang chiếu có ảnh ngang, đổi thứ tự, gỡ; phim không còn đủ điều kiện tự ẩn khỏi trang chủ.
 
 Giao diện thiết kế ưu tiên điện thoại (kiểm tra ở 375px) và dùng tốt trên máy tính.
 

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import RateLimitToast from './components/RateLimitToast'
+import ScrollToTop from './components/ScrollToTop'
 import { AdminRoute, ProtectedRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
 import Auth from './pages/user/Auth'
@@ -28,6 +29,7 @@ import PaymentResult from './pages/user/PaymentResult'
 export default function App() {
   return (
     <>
+      <ScrollToTop />
       <Navbar />
       <RateLimitToast />
       <Routes>
