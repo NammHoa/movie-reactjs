@@ -232,7 +232,7 @@ Mỗi tính năng bắt đầu từ một issue mô tả quy tắc và việc c�
 
 ## Hạn chế đã biết
 
-- Chưa có bộ kiểm thử tự động nằm trong repo (đã kiểm thử bằng các kịch bản chạy tay trong lúc phát triển); đây là việc nên làm tiếp.
+- Bộ test trong repo mới phủ một phần nhỏ (`cd server; npm test`, cần Node 22 trở lên); phần còn lại được kiểm thử bằng các kịch bản chạy tay trong lúc phát triển. Test đọc `MONGO_URI` trong `server/.env`, tự thêm đuôi `_test` vào tên database và **xóa sạch database `_test` đó** mỗi lần chạy.
 - Render bản miễn phí ngủ khi không có người dùng nên request đầu chậm; GitHub tạm dừng workflow theo lịch nếu repo không có hoạt động trong 60 ngày.
 - Hoàn tiền tự động qua VNPay chưa dùng được với tài khoản sandbox hiện tại (xem mục 6), nên bản chạy thử dùng hoàn thủ công.
 - Token đăng nhập lưu trong `localStorage` (giao diện và server khác tên miền nên chưa dùng cookie); cần chú ý chống XSS.
