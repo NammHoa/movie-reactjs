@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/axios'
+import BannerSlider from '../../components/BannerSlider'
 import MovieCard from '../../components/MovieCard'
 
 const TABS = [
@@ -13,6 +14,18 @@ export default function Home() {
   const [movies, setMovies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [banners, setBanners] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/banners')
+      .then(({ data }) => !cancelled && setBanners(data))
+      .catch(() => {}) // banner chỉ là phần phụ: lỗi thì ẩn, danh sách phim vẫn hiện
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -38,6 +51,12 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      {banners.length > 0 && (
+        <div className="mb-8">
+          <BannerSlider items={banners} />
+        </div>
+      )}
+
       <div className="mb-6 flex items-center gap-6 border-b border-gray-200">
         {TABS.map((t) => (
           <button

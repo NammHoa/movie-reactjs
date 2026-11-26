@@ -13,6 +13,7 @@ import Movies from './pages/admin/Movies'
 import Cinemas from './pages/admin/Cinemas'
 import Showtimes from './pages/admin/Showtimes'
 import Coupons from './pages/admin/Coupons'
+import Banners from './pages/admin/Banners'
 import Refunds from './pages/admin/Refunds'
 import MovieDetail from './pages/user/MovieDetail'
 import CinemaList from './pages/user/Cinemas'
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="showtimes" element={<Showtimes />} />
           <Route path="coupons" element={<Coupons />} />
           <Route path="refunds" element={<Refunds />} />
+          <Route path="banners" element={<Banners />} />
         </Route>
       </Routes>
     </>
