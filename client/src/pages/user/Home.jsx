@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../../api/axios'
 import BannerSlider from '../../components/BannerSlider'
 import BoxOffice from '../../components/BoxOffice'
-import MovieCard from '../../components/MovieCard'
+import PosterRow from '../../components/PosterRow'
 
 const TABS = [
   { value: 'now_showing', label: 'Đang chiếu' },
@@ -89,7 +88,7 @@ export default function Home() {
         </div>
       )}
 
-      <div id="movie-list" ref={listRef} className="mb-6 flex scroll-mt-4 items-center gap-6 border-b border-gray-200">
+      <div id="movie-list" ref={listRef} className="mb-6 flex scroll-mt-4 items-center justify-center gap-8 border-b border-gray-200">
         {TABS.map((t) => (
           <button
             key={t.value}
@@ -101,9 +100,6 @@ export default function Home() {
             {t.label}
           </button>
         ))}
-        <Link to="/cinemas" className="-mb-px ml-auto border-b-2 border-transparent px-1 pb-3 text-sm font-semibold text-gray-500 hover:text-brand sm:hidden">
-          Rạp chiếu →
-        </Link>
       </div>
 
       {loading &&<p className="text-gray-500">Đang tải...</p>}
@@ -112,11 +108,8 @@ export default function Home() {
         <p className="text-gray-500">Chưa có phim nào trong mục này.</p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {movies.map((m) => (
-          <MovieCard key={m._id} movie={m} />
-        ))}
-      </div>
+      {/* key theo tab: đổi tab thì hàng phim bắt đầu lại từ đầu */}
+      <PosterRow key={tab} movies={movies} />
     </div>
   )
 }
