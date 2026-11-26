@@ -7,6 +7,7 @@ const LINKS = [
   { to: '/admin/refunds', label: 'Hoàn tiền' },
   { to: '/admin/users', label: 'Người dùng' },
   { to: '/admin/movies', label: 'Quản lý phim' },
+  { to: '/admin/banners', label: 'Banner' },
   { to: '/admin/cinemas', label: 'Rạp & phòng chiếu' },
   { to: '/admin/showtimes', label: 'Suất chiếu' },
   { to: '/admin/coupons', label: 'Mã giảm giá' },
