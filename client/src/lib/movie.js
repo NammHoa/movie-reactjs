@@ -40,6 +40,10 @@ export const toLocalInput = (iso) => {
 export const dayLabel = (key) =>
   new Date(`${key}T00:00:00`).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })
 
+// "127 phút | 1/5/2026"; chưa có ngày khởi chiếu thì chỉ còn thời lượng
+export const rankMeta = ({ duration, releaseDate }) =>
+  [`${duration} phút`, releaseDate && formatDate(releaseDate)].filter(Boolean).join(' | ')
+
 // "Chính kịch, Việt Nam (127 phút)"; thiếu phần nào thì bỏ phần đó
 export function basicInfo({ genres, country, duration }) {
   const names = [...(genres ?? []), country].filter(Boolean).join(', ')
