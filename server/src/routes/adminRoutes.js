@@ -5,6 +5,7 @@ const bookings = require('../controllers/adminBookingController')
 const tickets = require('../controllers/adminTicketController')
 const users = require('../controllers/adminUserController')
 const coupons = require('../controllers/adminCouponController')
+const banners = require('../controllers/bannerController')
 const refundsCtl = require('../controllers/adminRefundController')
 
 // Toàn bộ khu vực này chỉ dành cho admin
@@ -29,6 +30,11 @@ router.post('/coupons', coupons.create)
 router.get('/coupons/:id', coupons.getOne)
 router.put('/coupons/:id', coupons.update)
 router.delete('/coupons/:id', coupons.remove)
+
+router.get('/banners', banners.adminList)
+router.post('/banners', banners.add)
+router.put('/banners/order', banners.reorder)
+router.delete('/banners/:movieId', banners.remove)
 
 router.get('/tickets/:code', tickets.lookup)
 router.post('/tickets/:code/check-in', tickets.checkIn)
