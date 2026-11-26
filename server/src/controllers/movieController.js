@@ -6,6 +6,7 @@ const { serverError } = require('../utils/http')
 
 const STATUSES = ['now_showing', 'coming_soon', 'ended']
 const URL_RE = /^https?:\/\//i
+const MAX_COUNTRY = 60
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '')
 
@@ -26,15 +27,24 @@ function clean(body, partial = false) {
     }
   }
   if (has('description')) data.description = str(body.description)
-  for (const k of ['poster', 'trailer']) {
+  for (const k of ['poster', 'trailer', 'backdrop']) {
     if (has(k)) {
       data[k] = str(body[k])
       if (data[k] && !URL_RE.test(data[k])) return { error: `Đường dẫn ${k} phải bắt đầu bằng http:// hoặc https://` }
     }
   }
-  if (has('genres')) {
-    const list = Array.isArray(body.genres) ? body.genres : str(body.genres).split(',')
-    data.genres = list.map(str).filter(Boolean)
+  for (const k of ['genres', 'formats']) {
+    if (!has(k)) continue
+    const list = Array.isArray(body[k]) ? body[k] : str(body[k]).split(',')
+    data[k] = list.map(str).filter(Boolean)
+  }
+  if (has('ageRating')) {
+    if (body.ageRating !== '' && !Movie.AGE_RATINGS.includes(body.ageRating)) return { error: 'Độ tuổi không hợp lệ' }
+    data.ageRating = body.ageRating
+  }
+  if (has('country')) {
+    data.country = str(body.country)
+    if (data.country.length > MAX_COUNTRY) return { error: `Quốc gia tối đa ${MAX_COUNTRY} ký tự` }
   }
   if (has('releaseDate')) {
     if (body.releaseDate) {
