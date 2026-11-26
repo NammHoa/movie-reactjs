@@ -152,7 +152,7 @@ Tất cả nằm dưới `/api`. Quyền: công khai, đăng nhập, hoặc admi
 |---|---|
 | Sức khỏe | `GET /health` |
 | Tài khoản | `POST /auth/check`, `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/change-password`; `GET /auth/me`; `GET, PATCH /auth/profile` |
-| Phim | `GET /movies`, `/movies/:id`; `GET /movies/:id/reviews`; thêm, sửa, xóa (admin) |
+| Phim | `GET /movies`, `/movies/box-office`, `/movies/:id`; `GET /movies/:id/reviews`; thêm, sửa, xóa (admin) |
 | Đánh giá | `GET /movies/:id/reviews/me`, `PUT /movies/:id/reviews`, `DELETE /reviews/:id` |
 | Banner trang chủ | `GET /banners`; quản lý (admin): `GET, POST /admin/banners`, `PUT /admin/banners/order`, `DELETE /admin/banners/:movieId` |
 | Rạp, phòng | `GET /cinemas` (kèm `?withUpcoming=1`), `GET /cinemas/:id/schedule?date=`, `GET /rooms`; thêm, sửa, xóa (admin) |

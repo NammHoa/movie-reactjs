@@ -3,6 +3,7 @@ const Movie = require('../models/Movie')
 const Review = require('../models/Review')
 const Showtime = require('../models/Showtime')
 const { removeMovie } = require('../services/banners')
+const { getBoxOffice } = require('../services/boxOffice')
 const { serverError } = require('../utils/http')
 
 const STATUSES = ['now_showing', 'coming_soon', 'ended']
@@ -74,6 +75,15 @@ exports.list = async (req, res) => {
     if (q) filter.title = { $regex: escapeRegex(q), $options: 'i' }
     const movies = await Movie.find(filter).sort({ releaseDate: -1, createdAt: -1 }).limit(200)
     res.json(movies)
+  } catch (err) {
+    serverError(res, err)
+  }
+}
+
+// GET /api/movies/box-office (công khai)
+exports.boxOffice = async (req, res) => {
+  try {
+    res.json(await getBoxOffice())
   } catch (err) {
     serverError(res, err)
   }
