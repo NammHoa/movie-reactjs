@@ -39,3 +39,10 @@ export const toLocalInput = (iso) => {
 // "T4, 18/11"
 export const dayLabel = (key) =>
   new Date(`${key}T00:00:00`).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })
+
+// "Chính kịch, Việt Nam (127 phút)"; thiếu phần nào thì bỏ phần đó
+export function basicInfo({ genres, country, duration }) {
+  const names = [...(genres ?? []), country].filter(Boolean).join(', ')
+  if (!duration) return names
+  return names ? `${names} (${duration} phút)` : `${duration} phút`
+}
