@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import api from '../../api/axios'
 import MovieInfo from '../../components/MovieInfo'
 import MovieReviews from '../../components/MovieReviews'
@@ -29,6 +29,12 @@ export default function MovieDetail() {
       cancelled = true
     }
   }, [id])
+
+  // "Đặt vé" ở trang chủ trỏ tới #showtimes. Mục đó chỉ có sau khi tải xong nên phải tự cuộn
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (status === 'ok' && hash === '#showtimes') document.getElementById('showtimes')?.scrollIntoView({ behavior: 'smooth' })
+  }, [status, hash])
 
   if (status === 'loading') return <p className="p-8 text-center text-gray-500">Đang tải...</p>
   if (status === 'notfound')
@@ -119,7 +125,8 @@ export default function MovieDetail() {
           )}
         </section>
 
-        <section id="reviews" className="mt-12 scroll-mt-20">
+        {/* Vào bằng "Đặt vé": phải đủ chiều cao ngay cả khi đánh giá chưa tải xong, nếu không trang cuộn dở giữa chừng */}
+        <section id="reviews" className={`mt-12 scroll-mt-20 ${hash === '#showtimes' ? 'min-h-screen' : ''}`}>
           <h2 className="mb-4 border-l-4 border-brand pl-3 text-2xl font-bold">Đánh giá</h2>
           <MovieReviews movieId={id} onSummary={setRating} />
         </section>

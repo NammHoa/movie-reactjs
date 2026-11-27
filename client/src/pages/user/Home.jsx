@@ -5,13 +5,7 @@ import BannerSlider from '../../components/BannerSlider'
 import BoxOffice from '../../components/BoxOffice'
 import PosterRow from '../../components/PosterRow'
 
-const TABS = [
-  { value: 'now_showing', label: 'Đang chiếu' },
-  { value: 'coming_soon', label: 'Sắp chiếu' },
-]
-
 export default function Home() {
-  const [tab, setTab] = useState('now_showing')
   const [movies, setMovies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -36,35 +30,17 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     api
-      .get('/movies', { params: { status: tab } })
-      .then(({ data }) => {
-        if (cancelled) return
-        setMovies(data)
-        setError('')
-      })
+      .get('/movies', { params: { status: 'now_showing' } })
+      .then(({ data }) => !cancelled && setMovies(data))
       .catch(() => !cancelled && setError('Không thể tải danh sách phim'))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
-  }, [tab])
-
-  const openTab = (value) => {
-    if (value === tab) return
-    setLoading(true)
-    setTab(value)
-  }
-
-  const pickTab = (value) => {
-    handledScroll.current = scrollRequest // khách tự đổi tab thì bỏ lệnh cuộn đang chờ
-    openTab(value)
-  }
+  }, [])
 
   // "Mua vé" trên menu và "Mua vé ngay" ở Box Office cùng đi qua đây
-  const showNowPlaying = () => {
-    openTab('now_showing')
-    setScrollRequest((n) => n + 1)
-  }
+  const showNowPlaying = () => setScrollRequest((n) => n + 1)
 
   // Menu "Mua vé" trỏ tới /#movie-list; bấm lại khi đang ở trang chủ vẫn đổi location.key.
   // Cập nhật ngay trong lúc render (cách React khuyên dùng) thay vì setState trong effect
@@ -102,28 +78,13 @@ export default function Home() {
         </div>
       )}
 
-      <div id="movie-list" ref={listRef} className="mb-6 flex scroll-mt-4 items-center justify-center gap-8 border-b border-gray-200">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => pickTab(t.value)}
-            className={`-mb-px border-b-2 px-1 pb-3 text-lg font-bold transition ${
-              tab === t.value ? 'border-brand text-brand' : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {loading &&<p className="text-gray-500">Đang tải...</p>}
-      {error && <p className="text-red-600">{error}</p>}
-      {!loading && !error && movies.length === 0 && (
-        <p className="text-gray-500">Chưa có phim nào trong mục này.</p>
-      )}
-
-      {/* key theo tab: đổi tab thì hàng phim bắt đầu lại từ đầu */}
-      <PosterRow key={tab} movies={movies} />
+      <section id="movie-list" ref={listRef} aria-labelledby="now-showing-title" className="scroll-mt-4">
+        <h2 id="now-showing-title" className="sr-only">Phim đang chiếu</h2>
+        {loading && <p className="text-center text-gray-500">Đang tải...</p>}
+        {error && <p className="text-center text-red-600">{error}</p>}
+        {!loading && !error && movies.length === 0 && <p className="text-center text-gray-500">Chưa có phim đang chiếu.</p>}
+        <PosterRow movies={movies} />
+      </section>
     </div>
   )
 }

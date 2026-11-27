@@ -2,7 +2,7 @@
 // Làm xong một tính năng thì bỏ comingSoon và khai báo route của nó trong App.jsx
 export const MENU = [
   { label: 'Mua vé', to: '/#movie-list' },
-  { label: 'Movie Talk', to: '/movie-talk', comingSoon: true },
+  { label: 'Movie Talk', to: '/movie-talk' },
   { label: 'Rạp chiếu phim', to: '/cinemas' },
   { label: 'Tin mới & Ưu đãi', to: '/news', comingSoon: true },
   { label: 'Shop', to: '/shop', comingSoon: true },

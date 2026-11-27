@@ -12,8 +12,9 @@ Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Re
 
 **Khách hàng**
 - Đăng ký, đăng nhập bằng số điện thoại hoặc email; phiên đăng nhập tự gia hạn (access token ngắn hạn + refresh token xoay vòng).
-- Trang chủ: banner phim nổi bật (khách tự bấm hoặc vuốt, không tự trượt), bảng Box Office 7 phim bán nhiều vé nhất trong 7 ngày gần nhất, hàng poster phim đang chiếu và sắp chiếu.
-- Menu 7 mục (điện thoại và máy tính bảng dùng nút ba gạch). Movie Talk, Tin mới & Ưu đãi, Shop, De Coin, Quảng cáo & Thuê rạp đang được phát triển.
+- Trang chủ: banner phim nổi bật (khách tự bấm hoặc vuốt, không tự trượt), bảng Box Office 7 phim bán nhiều vé nhất trong 7 ngày gần nhất, hàng poster phim đang chiếu (rê chuột hoặc chạm vào poster để đặt vé hay xem chi tiết).
+- Menu 7 mục (điện thoại và máy tính bảng dùng nút ba gạch). Tin mới & Ưu đãi, Shop, De Coin, Quảng cáo & Thuê rạp đang được phát triển.
+- Movie Talk: hai tab phim đang chiếu và sắp chiếu.
 - Trang chi tiết phim: trailer ở đầu trang, nhãn độ tuổi, thông tin phim (quốc gia, định dạng, ngày khởi chiếu...), lịch chiếu theo ngày và rạp.
 - Chọn theo rạp: danh sách rạp theo thành phố, lịch chiếu từng ngày, số ghế còn trống của mỗi suất.
 - Đánh giá và nhận xét phim (chỉ người đã xem, một đánh giá mỗi phim), điểm trung bình trên thẻ phim.
