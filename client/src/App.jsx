@@ -25,6 +25,8 @@ import Pay from './pages/user/Pay'
 import Ticket from './pages/user/Ticket'
 import Profile from './pages/user/Profile'
 import PaymentResult from './pages/user/PaymentResult'
+import ComingSoon from './pages/user/ComingSoon'
+import { MENU } from './lib/menu'
 
 export default function App() {
   return (
@@ -34,6 +36,9 @@ export default function App() {
       <RateLimitToast />
       <Routes>
         <Route path="/" element={<Home />} />
+        {MENU.filter((m) => m.comingSoon).map((m) => (
+          <Route key={m.to} path={m.to} element={<ComingSoon key={m.to} title={m.label} />} />
+        ))}
         <Route path="/movies/:id" element={<MovieDetail />} />
         <Route path="/cinemas" element={<CinemaList />} />
         <Route path="/cinemas/:id" element={<CinemaSchedule />} />
