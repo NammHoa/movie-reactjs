@@ -26,6 +26,7 @@ import Ticket from './pages/user/Ticket'
 import Profile from './pages/user/Profile'
 import PaymentResult from './pages/user/PaymentResult'
 import ComingSoon from './pages/user/ComingSoon'
+import MovieTalk from './pages/user/MovieTalk'
 import { MENU } from './lib/menu'
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
         {MENU.filter((m) => m.comingSoon).map((m) => (
           <Route key={m.to} path={m.to} element={<ComingSoon key={m.to} title={m.label} />} />
         ))}
+        <Route path="/movie-talk" element={<MovieTalk />} />
         <Route path="/movies/:id" element={<MovieDetail />} />
         <Route path="/cinemas" element={<CinemaList />} />
         <Route path="/cinemas/:id" element={<CinemaSchedule />} />

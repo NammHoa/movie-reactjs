@@ -14,8 +14,8 @@ test('đủ 7 mục đúng thứ tự', () => {
   ])
 })
 
-test('5 mục chưa làm', () => {
-  assert.deepEqual(MENU.filter((m) => m.comingSoon).map((m) => m.to), ['/movie-talk', '/news', '/shop', '/de-coin', '/rent'])
+test('4 mục chưa làm', () => {
+  assert.deepEqual(MENU.filter((m) => m.comingSoon).map((m) => m.to), ['/news', '/shop', '/de-coin', '/rent'])
 })
 
 test('tô mục của trang đang xem', () => {
