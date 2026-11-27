@@ -126,7 +126,7 @@ Nhãn độ tuổi: P xanh lá, K vàng, T13 xanh dương, T16 hồng đậm, T1
 ```
 
 - Dải tiêu đề: phim đang chiếu ghi "PHIM HOT TẠI RẠP", sắp chiếu ghi "PHIM SẮP CHIẾU", ngừng chiếu không có dải chữ.
-- Bấm ▶: link YouTube (`youtube.com/watch`, `youtu.be`, `shorts`, `embed`) phát ngay trong khung bằng `youtube-nocookie.com`; chỉ tải trình phát sau khi bấm. Link khác mở tab mới. Không có trailer thì không có ▶.
+- Bấm ▶: link YouTube (`youtube.com/watch`, `youtu.be`, `shorts`, `embed`) phát ngay trong khung bằng `youtube-nocookie.com`; link trỏ thẳng tới file video (`.mp4`, `.m4v`, `.webm`, `.ogv`, `.ogg`) phát ngay bằng trình phát của trình duyệt, phát lỗi thì hiện đường mở tab mới (**[Bạn chốt]** ngày 27/11/2026). Chỉ tải video sau khi bấm. Link khác mở tab mới. Không có trailer thì không có ▶. Nút "Xem trailer" của phim không có ảnh ngang cũng theo quy tắc này.
 - Không có ảnh ngang: bỏ khối nền đen; nếu có trailer thì hiện nút "Xem trailer" cạnh thông tin phim.
 - "Đặt vé" cuộn tới Lịch chiếu. Không có suất nào thì nút bị khóa, ghi "Chưa có suất chiếu".
 - Điểm giữ thang 5 sao; chưa có đánh giá thì ghi "Chưa có đánh giá".

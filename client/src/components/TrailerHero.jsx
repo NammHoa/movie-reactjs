@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { embedUrl, youtubeId } from '../lib/video'
+import { trailerSource } from '../lib/video'
+import TrailerPlayer from './TrailerPlayer'
 
 const TITLES = { now_showing: 'PHIM HOT TẠI RẠP', coming_soon: 'PHIM SẮP CHIẾU' }
 
@@ -12,13 +13,13 @@ const PlayIcon = () => (
   </svg>
 )
 
-// Khối ảnh ngang nền tối ở đầu trang phim; bấm ▶ mới tải trình phát YouTube
+// Khối ảnh ngang nền tối ở đầu trang phim; bấm ▶ mới tải video
 export default function TrailerHero({ movie }) {
   const [playing, setPlaying] = useState(false)
   const [broken, setBroken] = useState(false)
   if (!movie.backdrop) return null
 
-  const videoId = youtubeId(movie.trailer)
+  const source = trailerSource(movie.trailer)
   const title = TITLES[movie.status]
 
   return (
@@ -27,13 +28,7 @@ export default function TrailerHero({ movie }) {
       <div className="bg-[#231f20] sm:px-4 sm:py-8">
         <div className="relative mx-auto aspect-video w-full max-w-5xl overflow-hidden bg-black">
           {playing ? (
-            <iframe
-              src={embedUrl(videoId)}
-              title={`Trailer ${movie.title}`}
-              allow="autoplay; encrypted-media; fullscreen"
-              allowFullScreen
-              className="h-full w-full border-0"
-            />
+            <TrailerPlayer source={source} url={movie.trailer} title={movie.title} />
           ) : (
             <>
               {broken ? (
@@ -41,7 +36,7 @@ export default function TrailerHero({ movie }) {
               ) : (
                 <img src={movie.backdrop} alt={movie.title} onError={() => setBroken(true)} className="h-full w-full object-cover" />
               )}
-              {videoId ? (
+              {source ? (
                 <button type="button" onClick={() => setPlaying(true)} aria-label="Phát trailer" className={playCls}>
                   <PlayIcon />
                 </button>

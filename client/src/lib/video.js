@@ -22,3 +22,22 @@ export function youtubeId(url) {
 }
 
 export const embedUrl = (id) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`
+
+const VIDEO_FILE = /\.(mp4|m4v|webm|ogv|ogg)$/i
+
+// Link trỏ thẳng tới một file video (xét phần đường dẫn, bỏ qua tham số phía sau)
+function isVideoFile(url) {
+  try {
+    const u = new URL(url)
+    return (u.protocol === 'https:' || u.protocol === 'http:') && VIDEO_FILE.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+// Cách phát trailer ngay trong trang; null nghĩa là link này chỉ mở được ở trang của nó
+export function trailerSource(url) {
+  const id = youtubeId(url)
+  if (id) return { type: 'youtube', src: embedUrl(id) }
+  return isVideoFile(url) ? { type: 'file', src: url } : null
+}

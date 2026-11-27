@@ -72,7 +72,7 @@ export default function MovieForm({ movie, onClose, onSaved }) {
           <Row label="Đường dẫn ảnh ngang (16:9, dùng cho banner và trang phim)">
             <input className={inputCls} value={form.backdrop} onChange={set('backdrop')} placeholder="https://..." />
           </Row>
-          <Row label="Đường dẫn trailer (YouTube...)">
+          <Row label="Đường dẫn trailer (YouTube hoặc file .mp4)">
             <input className={inputCls} value={form.trailer} onChange={set('trailer')} placeholder="https://..." />
           </Row>
           <Row label="Thể loại (cách nhau bằng dấu phẩy)">

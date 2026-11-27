@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { AGE_INFO } from '../lib/ageRating'
 import { basicInfo, formatDate, formatRating } from '../lib/movie'
+import { trailerSource } from '../lib/video'
 import AgeBadge from './AgeBadge'
 import { Poster } from './MovieCard'
 import { Stars } from './Stars'
+import TrailerPlayer from './TrailerPlayer'
 
 function CopyLink() {
   const [result, setResult] = useState('') // '' | 'ok' | 'fail'
@@ -27,6 +29,37 @@ function CopyLink() {
           {result === 'ok' ? 'Đã sao chép' : 'Không sao chép được, hãy chép từ thanh địa chỉ'}
         </span>
       )}
+    </div>
+  )
+}
+
+const trailerBtn =
+  'inline-block cursor-pointer rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand hover:text-white'
+
+// Nút "Xem trailer" cho phim không có ảnh ngang (phim có ảnh ngang thì phát ngay ở đầu trang)
+function Trailer({ url, title }) {
+  const [playing, setPlaying] = useState(false)
+  const source = trailerSource(url)
+
+  if (!source) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className={`mt-4 ${trailerBtn}`}>
+        ▶ Xem trailer
+      </a>
+    )
+  }
+
+  if (!playing) {
+    return (
+      <button type="button" onClick={() => setPlaying(true)} className={`mt-4 ${trailerBtn}`}>
+        ▶ Xem trailer
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-4 aspect-video w-full max-w-2xl overflow-hidden rounded bg-black">
+      <TrailerPlayer source={source} url={url} title={title} />
     </div>
   )
 }
@@ -72,11 +105,7 @@ export default function MovieInfo({ movie, rating, canBook, onBook }) {
             </div>
           ))}
         </dl>
-        {!movie.backdrop && movie.trailer && (
-          <a href={movie.trailer} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand hover:text-white">
-            ▶ Xem trailer
-          </a>
-        )}
+        {!movie.backdrop && movie.trailer && <Trailer url={movie.trailer} title={movie.title} />}
       </div>
 
       <button
