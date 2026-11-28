@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
+import HotBanner from '../../components/HotBanner'
 import TalkCard from '../../components/TalkCard'
 import { PAGE_SIZE, TALK_TABS, orderTalkMovies, shownFromState, statusFromSearch } from '../../lib/movieTalk'
 
@@ -59,6 +60,9 @@ export default function MovieTalk() {
   return (
     <main>
       <h1 className="sr-only">Movie Talk</h1>
+
+      {/* Nằm ngoài phần đổi theo tab nên chuyển tab không làm banner tải lại */}
+      <HotBanner />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
         <nav aria-label="Nhóm phim" className="mb-8 flex justify-center gap-1">

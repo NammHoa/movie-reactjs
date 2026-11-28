@@ -1,3 +1,10 @@
+export const AUTOPLAY_MS = 5000
+
+// Banner chỉ tự trượt khi có từ 2 ảnh và không có lý do nào để tạm dừng:
+// khách bấm dừng, đang rê chuột, đang chạm giữ, đang dùng bàn phím trên banner, hoặc tab trình duyệt bị ẩn
+export const canAutoPlay = ({ count, paused, hovering, touching, keyboard, hidden }) =>
+  count > 1 && !(paused || hovering || touching || keyboard || hidden)
+
 // Đưa chỉ số về trong khoảng [0, count), quay vòng ở hai đầu
 export const wrapIndex = (i, count) => (count > 0 ? ((i % count) + count) % count : 0)
 

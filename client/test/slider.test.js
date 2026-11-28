@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { nearestIndex, rowState, wrapIndex } from '../src/lib/slider.js'
+import { AUTOPLAY_MS, canAutoPlay, nearestIndex, rowState, wrapIndex } from '../src/lib/slider.js'
 
 test('wrapIndex quay vòng ở hai đầu', () => {
   assert.equal(wrapIndex(3, 3), 0)
@@ -34,4 +34,21 @@ test('rowState: biết đang ở đầu, giữa hay cuối hàng', () => {
 test('rowState: vị trí cuộn lẻ vẫn tính đúng hai đầu', () => {
   assert.equal(row(0.5).atStart, true)
   assert.equal(row(1499.4).atEnd, true)
+})
+
+test('banner tự trượt mỗi 5 giây khi có từ 2 ảnh và không có lý do tạm dừng', () => {
+  assert.equal(AUTOPLAY_MS, 5000)
+  assert.equal(canAutoPlay({ count: 2 }), true)
+  assert.equal(canAutoPlay({ count: 8, paused: false, hovering: false, touching: false, keyboard: false, hidden: false }), true)
+})
+
+test('một ảnh hoặc không có ảnh thì không tự trượt', () => {
+  assert.equal(canAutoPlay({ count: 1 }), false)
+  assert.equal(canAutoPlay({ count: 0 }), false)
+})
+
+test('mỗi lý do tạm dừng đều làm banner đứng lại', () => {
+  for (const reason of ['paused', 'hovering', 'touching', 'keyboard', 'hidden']) {
+    assert.equal(canAutoPlay({ count: 3, [reason]: true }), false, reason)
+  }
 })
