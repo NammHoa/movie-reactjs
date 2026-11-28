@@ -151,6 +151,49 @@ test('không có đường biến admin hay khách thành quản lý, hay tài k
   assert.equal(await User.countDocuments({ role: 'admin' }), 2)
 })
 
+test('chốt "còn ít nhất một admin" không bao giờ biến tài khoản chi nhánh thành admin', async (t) => {
+  const { json } = await create()
+  const boss = await app.makeUser('admin')
+  // Giả lập hai admin hạ quyền nhau đúng lúc đang gỡ quyền: lúc chốt kiểm tra thì đếm được 0 admin
+  t.mock.method(User, 'countDocuments', async () => 0)
+
+  assert.equal((await role(json._id, 'user')).status, 200)
+  const branch = await User.findById(json._id).lean()
+  assert.deepEqual([branch.role, branch.cinema], ['user', undefined])
+
+  // Hạ quyền một admin trong cùng tình huống thì vẫn được hoàn tác
+  assert.equal((await role(boss.user._id, 'user')).status, 409)
+  assert.equal((await User.findById(boss.user._id).lean()).role, 'admin')
+})
+
+test('lệnh make-admin không cấp quyền admin cho tài khoản chi nhánh', async () => {
+  const { promoteToAdmin } = require('../src/services/adminAccounts')
+  const { json } = await create()
+  const refused = async () => {
+    const result = await promoteToAdmin(' SVH@Example.test ')
+    assert.match(result.error ?? '', /tài khoản chi nhánh/)
+    assert.equal(result.user, undefined)
+  }
+
+  await refused()
+  assert.equal((await User.findById(json._id).lean()).role, 'manager')
+  // Đã bị gỡ quyền quản lý thì vẫn là tài khoản chi nhánh
+  assert.equal((await role(json._id, 'user')).status, 200)
+  await refused()
+  assert.equal((await User.findById(json._id).lean()).role, 'user')
+})
+
+test('lệnh make-admin vẫn cấp quyền cho tài khoản thường, bằng email hoặc số điện thoại', async () => {
+  const { promoteToAdmin } = require('../src/services/adminAccounts')
+  const byEmail = await app.makeUser()
+  const byPhone = await app.makeUser('user', { phone: '0900000009' })
+
+  assert.equal((await promoteToAdmin(byEmail.user.email.toUpperCase())).user.role, 'admin')
+  assert.equal((await promoteToAdmin(' 0900000009 ')).user.role, 'admin')
+  assert.equal((await User.findById(byPhone.user._id).lean()).role, 'admin')
+  assert.equal((await promoteToAdmin('khong-co@example.test')).error, 'Không tìm thấy tài khoản này')
+})
+
 test('đặt lại mật khẩu: mật khẩu cũ và phiên cũ hết hiệu lực', async () => {
   const { json } = await create()
   const old = (await login('svh.test', PASS)).json
