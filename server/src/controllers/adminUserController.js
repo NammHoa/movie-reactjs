@@ -108,8 +108,9 @@ exports.setRole = wrap(async (req, res) => {
     .lean()
   if (!updated) return res.status(409).json({ message: 'Quyền của người dùng này vừa thay đổi, vui lòng tải lại' })
 
-  // Hai admin hạ quyền nhau cùng lúc có thể làm hết admin: nếu vậy thì hoàn tác để luôn còn ít nhất một admin
-  if (role === 'user' && (await User.countDocuments({ role: 'admin' })) === 0) {
+  // Hai admin hạ quyền nhau cùng lúc có thể làm hết admin: nếu vậy thì hoàn tác để luôn còn ít nhất một admin.
+  // Chỉ khi người bị hạ VỐN LÀ admin: hoàn tác cho quản lý sẽ biến tài khoản chi nhánh thành admin.
+  if (target.role === 'admin' && (await User.countDocuments({ role: 'admin' })) === 0) {
     await User.updateOne({ _id: target._id }, { role: 'admin' })
     return res.status(409).json({ message: 'Hệ thống phải còn ít nhất một admin' })
   }

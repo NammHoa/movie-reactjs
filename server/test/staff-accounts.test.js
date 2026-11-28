@@ -151,6 +151,21 @@ test('không có đường biến admin hay khách thành quản lý, hay tài k
   assert.equal(await User.countDocuments({ role: 'admin' }), 2)
 })
 
+test('chốt "còn ít nhất một admin" không bao giờ biến tài khoản chi nhánh thành admin', async (t) => {
+  const { json } = await create()
+  const boss = await app.makeUser('admin')
+  // Giả lập hai admin hạ quyền nhau đúng lúc đang gỡ quyền: lúc chốt kiểm tra thì đếm được 0 admin
+  t.mock.method(User, 'countDocuments', async () => 0)
+
+  assert.equal((await role(json._id, 'user')).status, 200)
+  const branch = await User.findById(json._id).lean()
+  assert.deepEqual([branch.role, branch.cinema], ['user', undefined])
+
+  // Hạ quyền một admin trong cùng tình huống thì vẫn được hoàn tác
+  assert.equal((await role(boss.user._id, 'user')).status, 409)
+  assert.equal((await User.findById(boss.user._id).lean()).role, 'admin')
+})
+
 test('đặt lại mật khẩu: mật khẩu cũ và phiên cũ hết hiệu lực', async () => {
   const { json } = await create()
   const old = (await login('svh.test', PASS)).json
