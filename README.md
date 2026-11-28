@@ -115,7 +115,7 @@ cd server && npm run dev    # http://localhost:5000
 cd client && npm run dev    # http://localhost:5173 (tự chuyển /api sang server)
 ```
 
-Dữ liệu ban đầu: đăng ký một tài khoản trên web, cấp quyền admin bằng lệnh dưới, rồi vào mục **Quản trị** để thêm phim, rạp, phòng chiếu và suất chiếu.
+Dữ liệu ban đầu: đăng ký một tài khoản trên web, cấp quyền admin bằng lệnh dưới (không dùng được cho tài khoản chi nhánh), rồi vào mục **Quản trị** để thêm phim, rạp, phòng chiếu và suất chiếu.
 
 ```bash
 cd server
