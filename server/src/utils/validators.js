@@ -6,14 +6,19 @@ const GENDERS = ['male', 'female', 'other']
 
 const normalizePhone = (p) => str(p).replace(/[\s.-]/g, '').replace(/^\+84/, '0')
 
-// "abc@x.com" -> { type: 'email' }, "0988..." -> { type: 'phone' }, sai định dạng -> null
+// Tên đăng nhập của tài khoản chi nhánh. Bắt buộc có chữ cái nên không bao giờ trùng dạng với số điện thoại.
+const USERNAME_RE = /^(?=.*[a-z])[a-z0-9.]{4,30}$/
+
+// "abc@x.com" -> { type: 'email' }, "0988..." -> { type: 'phone' }, "svh.denim" -> { type: 'username' }, sai định dạng -> null
 const parseIdentifier = (raw) => {
   const v = str(raw)
   if (v.includes('@')) {
     return EMAIL_RE.test(v) ? { type: 'email', value: v.toLowerCase() } : null
   }
   const phone = normalizePhone(v)
-  return PHONE_RE.test(phone) ? { type: 'phone', value: phone } : null
+  if (PHONE_RE.test(phone)) return { type: 'phone', value: phone }
+  const username = v.toLowerCase()
+  return USERNAME_RE.test(username) ? { type: 'username', value: username } : null
 }
 
 // 8-16 ký tự, có chữ hoa, chữ thường, và số hoặc ký tự đặc biệt
@@ -24,4 +29,4 @@ const passwordError = (pw) => {
   return null
 }
 
-module.exports = { GENDERS, normalizePhone, parseIdentifier, passwordError }
+module.exports = { GENDERS, USERNAME_RE, normalizePhone, parseIdentifier, passwordError }

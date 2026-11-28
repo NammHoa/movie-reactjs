@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true }, // họ và tên
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, unique: true, sparse: true, trim: true },
+    username: { type: String, unique: true, sparse: true, trim: true, lowercase: true }, // chỉ tài khoản chi nhánh có
     password: { type: String, required: true }, // đã hash
     dob: Date,
     gender: { type: String, enum: ['male', 'female', 'other'] },

@@ -1,31 +1,41 @@
 const bcrypt = require('bcryptjs')
 const User = require('../models/User')
+const Cinema = require('../models/Cinema')
 const { serverError, str } = require('../utils/http')
 const { GENDERS, parseIdentifier, passwordError } = require('../utils/validators')
 const { signToken } = require('../utils/token')
 const refreshTokens = require('../services/refreshTokens')
 
-const publicUser = (u) => ({
-  id: u._id,
-  name: u.name,
-  email: u.email,
-  phone: u.phone,
-  role: u.role,
-})
-
-const findByIdentifier = (id) =>
-  User.findOne(id.type === 'email' ? { email: id.value } : { phone: id.value })
-
-// Thông tin tài khoản hiện tại (dùng để client đồng bộ lại role sau khi đổi quyền)
-exports.me = (req, res) => {
-  res.json({ user: publicUser(req.account) })
+// cinema chỉ có giá trị với quản lý rạp: client cần id và tên rạp để hiện khu quản trị của rạp đó
+const publicUser = async (u) => {
+  const cinema = u.role === 'manager' && u.cinema ? await Cinema.findById(u.cinema).select('name').lean() : null
+  return {
+    id: u._id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    role: u.role,
+    cinema,
+  }
 }
 
-// Bước 1: kiểm tra SĐT/Email đã có tài khoản chưa
+// parseIdentifier trả type trùng tên trường trong User: email, phone hoặc username
+const findByIdentifier = (id) => User.findOne({ [id.type]: id.value })
+
+// Thông tin tài khoản hiện tại (dùng để client đồng bộ lại role sau khi đổi quyền)
+exports.me = async (req, res) => {
+  try {
+    res.json({ user: await publicUser(req.account) })
+  } catch (err) {
+    serverError(res, err)
+  }
+}
+
+// Bước 1: kiểm tra SĐT / email / tên đăng nhập đã có tài khoản chưa
 exports.check = async (req, res) => {
   try {
     const id = parseIdentifier(req.body.identifier)
-    if (!id) return res.status(400).json({ message: 'Số điện thoại hoặc email không hợp lệ' })
+    if (!id) return res.status(400).json({ message: 'Số điện thoại, email hoặc tên đăng nhập không hợp lệ' })
     const exists = !!(await findByIdentifier(id))
     res.json({ exists, type: id.type, value: id.value })
   } catch (err) {
@@ -69,7 +79,7 @@ exports.register = async (req, res) => {
       district: str(req.body.district),
       address: str(req.body.address),
     })
-    res.status(201).json({ user: publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
+    res.status(201).json({ user: await publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ message: 'Email hoặc số điện thoại đã được sử dụng' })
     serverError(res, err)
@@ -84,7 +94,7 @@ exports.login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Thông tin đăng nhập hoặc mật khẩu không đúng' })
     }
-    res.json({ user: publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
+    res.json({ user: await publicUser(user), token: signToken(user), refreshToken: await refreshTokens.issue(user._id) })
   } catch (err) {
     serverError(res, err)
   }
@@ -95,7 +105,7 @@ exports.refresh = async (req, res) => {
   try {
     const result = await refreshTokens.rotate(req.body?.refreshToken)
     if (!result) return res.status(401).json({ message: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại' })
-    res.json({ user: publicUser(result.user), token: signToken(result.user), refreshToken: result.refreshToken })
+    res.json({ user: await publicUser(result.user), token: signToken(result.user), refreshToken: result.refreshToken })
   } catch (err) {
     serverError(res, err)
   }
