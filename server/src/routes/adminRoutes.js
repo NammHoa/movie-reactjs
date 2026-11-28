@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const { verifyToken, isAdmin } = require('../middleware/auth')
+const { verifyToken, isAdmin, isStaff } = require('../middleware/auth')
 const c = require('../controllers/adminController')
 const bookings = require('../controllers/adminBookingController')
 const tickets = require('../controllers/adminTicketController')
@@ -8,14 +8,19 @@ const coupons = require('../controllers/adminCouponController')
 const banners = require('../controllers/bannerController')
 const refundsCtl = require('../controllers/adminRefundController')
 
-// Toàn bộ khu vực này chỉ dành cho admin
-router.use(verifyToken, isAdmin)
+router.use(verifyToken)
 
-router.get('/stats', c.stats)
+// Quản lý rạp dùng được; mỗi controller này tự lọc theo rạp của người gọi
+router.get('/stats', isStaff, c.stats)
+router.get('/bookings', isStaff, bookings.list)
+router.get('/bookings/:id', isStaff, bookings.getOne)
+router.post('/bookings/:id/cancel', isStaff, bookings.cancel)
+router.get('/tickets/:code', isStaff, tickets.lookup)
+router.post('/tickets/:code/check-in', isStaff, tickets.checkIn)
 
-router.get('/bookings', bookings.list)
-router.get('/bookings/:id', bookings.getOne)
-router.post('/bookings/:id/cancel', bookings.cancel)
+// Mọi route khai báo DƯỚI dòng này chỉ dành cho trụ sở
+router.use(isAdmin)
+
 router.post('/bookings/:id/refund', bookings.refund)
 
 router.get('/refunds', refundsCtl.list)
@@ -35,8 +40,5 @@ router.get('/banners', banners.adminList)
 router.post('/banners', banners.add)
 router.put('/banners/order', banners.reorder)
 router.delete('/banners/:movieId', banners.remove)
-
-router.get('/tickets/:code', tickets.lookup)
-router.post('/tickets/:code/check-in', tickets.checkIn)
 
 module.exports = router

@@ -29,7 +29,8 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Mật khẩu đã được đổi, vui lòng đăng nhập lại' })
     }
     req.account = account // toàn bộ thông tin tài khoản (không có mật khẩu)
-    req.user = { id: account._id.toString(), role: account.role } // role lấy từ database
+    // role và rạp lấy từ database
+    req.user = { id: account._id.toString(), role: account.role, cinema: account.cinema ? String(account.cinema) : null }
     next()
   } catch (err) {
     serverError(res, err)
@@ -43,4 +44,11 @@ const isAdmin = (req, res, next) => {
   next()
 }
 
-module.exports = { verifyToken, isAdmin }
+// Nhân viên: trụ sở, hoặc quản lý đã được gán rạp. Controller phía sau phải tự lọc theo rạp (services/cinemaScope).
+const isStaff = (req, res, next) => {
+  const { role, cinema } = req.user ?? {}
+  if (role === 'admin' || (role === 'manager' && cinema)) return next()
+  res.status(403).json({ message: role === 'manager' ? 'Tài khoản quản lý chưa được gán rạp' : 'Bạn không có quyền quản trị' })
+}
+
+module.exports = { verifyToken, isAdmin, isStaff }

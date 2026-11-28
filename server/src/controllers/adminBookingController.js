@@ -8,6 +8,7 @@ const { releaseForBooking } = require('../services/coupons')
 const Refund = require('../models/Refund')
 const refunds = require('../services/refunds')
 const refundView = require('./adminRefundController')
+const { scopeOf, showtimeIdsOf, showtimeInCinema } = require('../services/cinemaScope')
 
 const STATUSES = ['pending', 'paid', 'cancelled', 'expired', 'refunding', 'refunded']
 const MAX_LIMIT = 100
@@ -42,6 +43,8 @@ exports.list = wrap(async (req, res) => {
 
   const filter = {}
   if (STATUSES.includes(status)) filter.paymentStatus = status
+  const scope = scopeOf(req.user)
+  if (scope) filter.showtime = { $in: await showtimeIdsOf(scope) }
 
   const term = q?.trim()
   if (term) {
@@ -65,10 +68,14 @@ exports.list = wrap(async (req, res) => {
 exports.getOne = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const booking = await Booking.findById(req.params.id).populate(POPULATE).lean()
-  if (!booking) return res.status(404).json(NOT_FOUND)
-  const payments = await Payment.find({ booking: booking._id }).sort({ createdAt: -1 }).select('-user').lean()
+  const scope = scopeOf(req.user)
+  if (!booking || (scope && String(booking.showtime?.room?.cinema?._id) !== scope)) return res.status(404).json(NOT_FOUND)
+  // Quản lý rạp chỉ theo dõi: không thấy chi tiết lỗi, mã phía cổng thanh toán hay thao tác hoàn tiền
+  const fields = scope ? 'amount status provider txnRef createdAt' : '-user'
+  const payments = await Payment.find({ booking: booking._id }).sort({ createdAt: -1 }).select(fields).lean()
   const refund = await Refund.findOne({ booking: booking._id }).populate(refundView.POPULATE.filter((p) => p.path !== 'booking'))
-  res.json({ ...present(booking), payments, refund: refund ? refundView.present(refund) : null })
+  const show = scope ? refunds.summary : refundView.present
+  res.json({ ...present(booking), payments, refund: refund ? show(refund) : null })
 })
 
 // POST /api/admin/bookings/:id/refund -> hủy vé ĐÃ thanh toán và hoàn tiền cho khách (không bị giới hạn 2 giờ như khách tự hủy)
@@ -98,7 +105,9 @@ exports.refund = wrap(async (req, res) => {
 exports.cancel = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const booking = await Booking.findById(req.params.id)
-  if (!booking) return res.status(404).json(NOT_FOUND)
+  const scope = scopeOf(req.user)
+  // Kiểm tra phạm vi trước các thông báo theo trạng thái, để đơn rạp khác không lộ gì
+  if (!booking || (scope && !(await showtimeInCinema(booking.showtime, scope)))) return res.status(404).json(NOT_FOUND)
 
   const messages = {
     paid: 'Đơn đã thanh toán, không thể hủy tại đây (cần hoàn tiền qua cổng thanh toán)',

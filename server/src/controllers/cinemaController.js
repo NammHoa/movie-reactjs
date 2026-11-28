@@ -1,6 +1,7 @@
 const Cinema = require('../models/Cinema')
 const Room = require('../models/Room')
 const Showtime = require('../models/Showtime')
+const User = require('../models/User')
 const { str, isId, wrap } = require('../utils/http')
 const { releaseExpired } = require('../services/bookingExpiry')
 
@@ -133,6 +134,9 @@ exports.remove = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   if (await Room.exists({ cinema: req.params.id })) {
     return res.status(409).json({ message: 'Rạp còn phòng chiếu, hãy xóa các phòng trước' })
+  }
+  if (await User.exists({ role: 'manager', cinema: req.params.id })) {
+    return res.status(409).json({ message: 'Rạp còn quản lý, hãy chuyển rạp hoặc gỡ quyền quản lý trước' })
   }
   const cinema = await Cinema.findByIdAndDelete(req.params.id)
   if (!cinema) return res.status(404).json(NOT_FOUND)
