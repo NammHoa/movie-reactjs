@@ -5,6 +5,15 @@ const Room = require('../models/Room')
 const { str, isId, wrap } = require('../utils/http')
 const { buildSeatMap } = require('../utils/seats')
 const { releaseExpired } = require('../services/bookingExpiry')
+const { scopeOf, roomInCinema } = require('../services/cinemaScope')
+
+const OTHER_ROOM = { message: 'Bạn chỉ quản lý được suất chiếu của rạp mình' }
+
+// Phòng này có ngoài phạm vi của người gọi không (trụ sở thì không bao giờ)
+const roomForbidden = async (user, roomId) => {
+  const scope = scopeOf(user)
+  return !!scope && !(await roomInCinema(roomId, scope))
+}
 
 const GAP_MS = 15 * 60 * 1000 // nghỉ 15 phút giữa 2 suất (dọn phòng)
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -107,6 +116,7 @@ exports.create = wrap(async (req, res) => {
   if (isNaN(start)) return res.status(400).json({ message: 'Giờ chiếu không hợp lệ' })
   if (start <= new Date()) return res.status(400).json({ message: 'Giờ chiếu phải ở tương lai' })
   if (!validPrice(price)) return res.status(400).json({ message: 'Giá vé phải là số nguyên từ 1 đến 5.000.000 VND' })
+  if (await roomForbidden(req.user, roomId)) return res.status(403).json(OTHER_ROOM)
 
   const [movie, room] = await Promise.all([Movie.findById(movieId), Room.exists({ _id: roomId })])
   if (!movie) return res.status(400).json({ message: 'Phim không tồn tại' })
@@ -124,7 +134,8 @@ exports.create = wrap(async (req, res) => {
 exports.update = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const st = await Showtime.findById(req.params.id)
-  if (!st) return res.status(404).json(NOT_FOUND)
+  // Suất của rạp khác: trả như không tồn tại
+  if (!st || (await roomForbidden(req.user, st.room))) return res.status(404).json(NOT_FOUND)
 
   const b = req.body
   const movieId = b.movie !== undefined ? b.movie : st.movie.toString()
@@ -136,6 +147,7 @@ exports.update = wrap(async (req, res) => {
   if (!isId(roomId)) return res.status(400).json({ message: 'Phòng chiếu không hợp lệ' })
   if (isNaN(start)) return res.status(400).json({ message: 'Giờ chiếu không hợp lệ' })
   if (!validPrice(price)) return res.status(400).json({ message: 'Giá vé phải là số nguyên từ 1 đến 5.000.000 VND' })
+  if (roomId !== st.room.toString() && (await roomForbidden(req.user, roomId))) return res.status(403).json(OTHER_ROOM)
 
   const scheduleChanged =
     movieId !== st.movie.toString() || roomId !== st.room.toString() || start.getTime() !== st.startTime.getTime()
@@ -164,7 +176,7 @@ exports.update = wrap(async (req, res) => {
 exports.remove = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const st = await Showtime.findById(req.params.id)
-  if (!st) return res.status(404).json(NOT_FOUND)
+  if (!st || (await roomForbidden(req.user, st.room))) return res.status(404).json(NOT_FOUND)
   if (st.bookedSeats.length > 0) {
     return res.status(409).json({ message: 'Suất chiếu đã có người đặt vé, không thể xóa' })
   }

@@ -1,13 +1,14 @@
 const router = require('express').Router()
-const { verifyToken, isAdmin } = require('../middleware/auth')
+const { verifyToken, isStaff } = require('../middleware/auth')
 const c = require('../controllers/showtimeController')
 
 router.get('/', c.list)
 router.get('/:id/seats', c.seats)
 router.get('/:id', c.getOne)
 
-router.post('/', verifyToken, isAdmin, c.create)
-router.put('/:id', verifyToken, isAdmin, c.update)
-router.delete('/:id', verifyToken, isAdmin, c.remove)
+// Quản lý rạp chỉ ghi được suất trong phòng của rạp mình (controller kiểm tra)
+router.post('/', verifyToken, isStaff, c.create)
+router.put('/:id', verifyToken, isStaff, c.update)
+router.delete('/:id', verifyToken, isStaff, c.remove)
 
 module.exports = router

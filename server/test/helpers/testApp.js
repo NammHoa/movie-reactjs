@@ -44,9 +44,9 @@ async function startTestApp() {
       })
       return { status: res.status, json: await res.json().catch(() => null) }
     },
-    async makeUser(role = 'user') {
+    async makeUser(role = 'user', extra = {}) {
       users += 1
-      const user = await User.create({ name: `Test ${users}`, email: `test${users}@example.test`, password: 'khong-dung-de-dang-nhap', role })
+      const user = await User.create({ name: `Test ${users}`, email: `test${users}@example.test`, password: 'khong-dung-de-dang-nhap', role, ...extra })
       return { user, token: signToken(user) }
     },
     async stop() {

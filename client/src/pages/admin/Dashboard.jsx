@@ -141,8 +141,16 @@ function TopMovies({ movies }) {
 }
 
 function Overview({ status, counts }) {
+  // Server chỉ gửi số người dùng cho trụ sở; quản lý rạp nhận số liệu của riêng rạp mình
+  const hq = counts.users !== undefined
+  const totals = [
+    ['Phim đang chiếu', counts.nowShowing],
+    ['Suất sắp tới', counts.upcomingShowtimes],
+    ...(hq ? [['Người dùng', counts.users]] : []),
+  ]
+
   return (
-    <Card title="Tình trạng hệ thống">
+    <Card title={hq ? 'Tình trạng hệ thống' : 'Tình trạng rạp'}>
       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Đơn đặt vé (tất cả)</p>
       <ul className="mb-5 space-y-2">
         {STATUS_ROWS.map((s) => (
@@ -155,12 +163,8 @@ function Overview({ status, counts }) {
           </li>
         ))}
       </ul>
-      <dl className="grid grid-cols-3 gap-2 border-t pt-4 text-center">
-        {[
-          ['Phim đang chiếu', counts.nowShowing],
-          ['Suất sắp tới', counts.upcomingShowtimes],
-          ['Người dùng', counts.users],
-        ].map(([label, value]) => (
+      <dl className={`grid gap-2 border-t pt-4 text-center ${hq ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {totals.map(([label, value]) => (
           <div key={label}>
             <dd className="text-xl font-bold">{number(value)}</dd>
             <dt className="text-xs text-gray-500">{label}</dt>

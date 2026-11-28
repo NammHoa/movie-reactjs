@@ -3,35 +3,68 @@ import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
-import { ErrorText, PageHeader, inputCls } from './ui'
+import { AssignCinemaForm, CreateManagerForm, ResetPasswordForm } from './StaffForms'
+import { ErrorText, PageHeader, inputCls, primaryBtn } from './ui'
 
 const LIMIT = 15
 
 const TABS = [
   { value: 'all', label: 'Tất cả' },
   { value: 'admin', label: 'Admin' },
+  { value: 'manager', label: 'Quản lý rạp' },
   { value: 'user', label: 'Người dùng' },
 ]
 
+const BADGES = {
+  admin: { label: 'Admin', cls: 'bg-brand/10 text-brand' },
+  manager: { label: 'Quản lý rạp', cls: 'bg-blue-100 text-blue-700' },
+  user: { label: 'Người dùng', cls: 'bg-gray-200 text-gray-600' },
+}
+
 function RoleBadge({ role }) {
-  return role === 'admin' ? (
-    <span className="inline-block whitespace-nowrap rounded bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">Admin</span>
-  ) : (
-    <span className="inline-block whitespace-nowrap rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">Người dùng</span>
+  const b = BADGES[role] ?? BADGES.user
+  return <span className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold ${b.cls}`}>{b.label}</span>
+}
+
+// Dòng phụ của tài khoản chi nhánh: tên đăng nhập và rạp đang quản lý
+function BranchLine({ u }) {
+  if (!u.username) return null
+  return (
+    <p className="break-words text-xs text-gray-600">
+      Đăng nhập: <b className="break-all">{u.username}</b>
+      {u.cinema?.name ? ` · ${u.cinema.name}` : ''}
+    </p>
   )
 }
 
-function RoleButton({ u, me, busy, onChange }) {
+const actionCls = 'h-10 whitespace-nowrap rounded border px-3 text-sm font-semibold disabled:opacity-50'
+const strongAction = `${actionCls} border-brand text-brand hover:bg-brand/5`
+const plainAction = `${actionCls} border-gray-300 text-gray-700 hover:bg-gray-100`
+
+function UserActions({ u, me, busy, onToggleAdmin, onRevoke, onOpen }) {
   if (u._id === me) return <span className="text-xs text-gray-400">Tài khoản của bạn</span>
+
+  // Tài khoản chi nhánh không cấp quyền admin được
+  if (u.username && u.role !== 'admin') {
+    const active = u.role === 'manager'
+    return (
+      <div className="flex flex-wrap justify-end gap-2">
+        <button onClick={() => onOpen({ kind: 'assign', account: u })} className={active ? plainAction : strongAction}>
+          {active ? 'Đổi rạp' : 'Cấp lại quyền'}
+        </button>
+        <button onClick={() => onOpen({ kind: 'password', account: u })} className={plainAction}>Đặt lại mật khẩu</button>
+        {active && (
+          <button onClick={() => onRevoke(u)} disabled={busy} className={plainAction}>
+            {busy ? 'Đang lưu...' : 'Gỡ quyền'}
+          </button>
+        )}
+      </div>
+    )
+  }
+
   const promote = u.role !== 'admin'
   return (
-    <button
-      onClick={() => onChange(u)}
-      disabled={busy}
-      className={`h-10 whitespace-nowrap rounded border px-3 text-sm font-semibold disabled:opacity-50 ${
-        promote ? 'border-brand text-brand hover:bg-brand/5' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-      }`}
-    >
+    <button onClick={() => onToggleAdmin(u)} disabled={busy} className={promote ? strongAction : plainAction}>
       {busy ? 'Đang lưu...' : promote ? 'Cấp quyền admin' : 'Hạ xuống người dùng'}
     </button>
   )
@@ -47,7 +80,17 @@ export default function Users() {
   const [reload, setReload] = useState(0)
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [modal, setModal] = useState(null) // { kind: 'create' | 'assign' | 'password', account }
+  const [cinemas, setCinemas] = useState([])
   const [done, setDone] = useState({ key: '', data: null, error: '' })
+
+  useEffect(() => {
+    api
+      .get('/cinemas')
+      .then(({ data }) => setCinemas(data))
+      .catch((err) => setActionError(errorMessage(err, 'Không thể tải danh sách rạp')))
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,15 +116,11 @@ export default function Users() {
   const loading = done.key !== key
   const items = data?.items ?? []
 
-  const changeRole = async (u) => {
-    const next = u.role === 'admin' ? 'user' : 'admin'
-    const message =
-      next === 'admin'
-        ? `Cấp quyền admin cho ${u.name}? Người này sẽ quản lý được phim, rạp, đơn đặt vé và người dùng.`
-        : `Hạ ${u.name} xuống người dùng thường? Họ sẽ mất quyền vào khu vực quản trị ngay lập tức.`
+  const changeRole = async (u, next, message) => {
     if (!window.confirm(message)) return
     setBusyId(u._id)
     setActionError('')
+    setNotice('')
     try {
       await api.patch(`/admin/users/${u._id}/role`, { role: next })
       setReload((r) => r + 1)
@@ -93,18 +132,49 @@ export default function Users() {
     }
   }
 
+  const toggleAdmin = (u) =>
+    u.role === 'admin'
+      ? changeRole(u, 'user', `Hạ ${u.name} xuống người dùng thường? Họ sẽ mất quyền vào khu vực quản trị ngay lập tức.`)
+      : changeRole(u, 'admin', `Cấp quyền admin cho ${u.name}? Người này sẽ quản lý được phim, rạp, đơn đặt vé và người dùng.`)
+
+  const revoke = (u) =>
+    changeRole(u, 'user', `Gỡ quyền quản lý của ${u.name}? Họ sẽ mất quyền vào khu vực quản trị ngay lập tức.`)
+
+  const openModal = (next) => {
+    setNotice('')
+    setActionError('')
+    setModal(next)
+  }
+
+  const saved = (message) => {
+    setModal(null)
+    setNotice(message)
+    setReload((r) => r + 1)
+  }
+
+  const actions = (u) => (
+    <UserActions u={u} me={me} busy={busyId === u._id} onToggleAdmin={toggleAdmin} onRevoke={revoke} onOpen={openModal} />
+  )
+
   const count = (v) => (data ? ` (${data.counts[v].toLocaleString('vi-VN')})` : '')
 
   return (
     <div>
-      <PageHeader title="Người dùng" />
+      <PageHeader
+        title="Người dùng"
+        action={
+          <button onClick={() => openModal({ kind: 'create' })} disabled={cinemas.length === 0} className={primaryBtn} title={cinemas.length === 0 ? 'Cần có rạp trước' : ''}>
+            + Tạo tài khoản quản lý rạp
+          </button>
+        }
+      />
 
       <div className="mb-4 space-y-3">
         <input
           type="search"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Tìm theo tên, email, số điện thoại"
+          placeholder="Tìm theo tên, email, số điện thoại, tên đăng nhập"
           aria-label="Tìm người dùng"
           className={`${inputCls} h-11`}
         />
@@ -129,6 +199,7 @@ export default function Users() {
       </div>
 
       <ErrorText message={error || actionError} />
+      {notice && <p role="status" className="mb-4 break-words rounded bg-green-50 px-3 py-2 text-sm text-green-700">{notice}</p>}
       {!data && !error && <p className="text-gray-500">Đang tải...</p>}
 
       {data && (
@@ -155,6 +226,7 @@ export default function Users() {
                       <tr key={u._id}>
                         <td className="px-4 py-3">
                           <p className="font-medium">{u.name}{u._id === me && <span className="ml-1 text-xs text-gray-400">(bạn)</span>}</p>
+                          <BranchLine u={u} />
                           <p className="text-xs text-gray-400">Tham gia {formatDateTime(u.createdAt)}</p>
                         </td>
                         <td className="px-4 py-3">
@@ -166,7 +238,7 @@ export default function Users() {
                           <p className="font-semibold">{formatPrice(u.totalSpent)}</p>
                           <p className="text-xs text-gray-500">{u.paidBookings} đơn</p>
                         </td>
-                        <td className="px-4 py-3 text-right"><RoleButton u={u} me={me} busy={busyId === u._id} onChange={changeRole} /></td>
+                        <td className="px-4 py-3 text-right">{actions(u)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -180,6 +252,7 @@ export default function Users() {
                       <p className="min-w-0 break-words font-semibold">{u.name}{u._id === me && <span className="ml-1 text-xs font-normal text-gray-400">(bạn)</span>}</p>
                       <RoleBadge role={u.role} />
                     </div>
+                    <BranchLine u={u} />
                     <p className="mt-1 break-all text-sm text-gray-600">{u.email}</p>
                     <p className="text-sm text-gray-500">{u.phone ?? '—'}</p>
                     <div className="mt-2 flex items-end justify-between gap-2 text-sm">
@@ -187,7 +260,7 @@ export default function Users() {
                       <span className="font-bold">{formatPrice(u.totalSpent)}</span>
                     </div>
                     <div className="mt-3 flex min-h-10 items-center justify-end border-t pt-3">
-                      <RoleButton u={u} me={me} busy={busyId === u._id} onChange={changeRole} />
+                      {actions(u)}
                     </div>
                   </li>
                 ))}
@@ -209,6 +282,10 @@ export default function Users() {
           {data.pages <= 1 && items.length > 0 && <p className="mt-4 text-center text-sm text-gray-400">{data.total.toLocaleString('vi-VN')} người</p>}
         </div>
       )}
+
+      {modal?.kind === 'create' && <CreateManagerForm cinemas={cinemas} onClose={() => setModal(null)} onSaved={saved} />}
+      {modal?.kind === 'assign' && <AssignCinemaForm account={modal.account} cinemas={cinemas} onClose={() => setModal(null)} onSaved={saved} />}
+      {modal?.kind === 'password' && <ResetPasswordForm account={modal.account} onClose={() => setModal(null)} onSaved={saved} />}
     </div>
   )
 }

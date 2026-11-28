@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking')
 const { wrap } = require('../utils/http')
 const { ADMIN_POPULATE } = require('../services/bookingView')
+const { scopeOf } = require('../services/cinemaScope')
 
 // Cho phép vào rạp từ trước giờ chiếu này; sớm hơn thì từ chối
 const CHECKIN_OPENS_MS = 120 * 60 * 1000
@@ -32,13 +33,23 @@ async function findByCode(code) {
   return Booking.findOne({ code }).populate(POPULATE).lean()
 }
 
+// Quản lý rạp quét phải vé rạp khác: chỉ cho biết vé của rạp nào, không kèm thông tin khách, ghế hay trạng thái.
+// Trả null nếu người gọi được xử lý vé này.
+function otherCinema(booking, user) {
+  const scope = scopeOf(user)
+  const cinema = booking.showtime?.room?.cinema
+  if (!scope || String(cinema?._id) === scope) return null
+  const message = cinema?.name ? `Vé này thuộc rạp ${cinema.name}, không soát được ở đây` : 'Vé này không thuộc rạp của bạn'
+  return { result: { status: 'other_cinema', message }, booking: null }
+}
+
 // GET /api/admin/tickets/:code -> xem thông tin và tình trạng vé, KHÔNG thay đổi gì
 exports.lookup = wrap(async (req, res) => {
   const code = normalizeCode(req.params.code)
   if (!CODE_RE.test(code)) return res.status(400).json({ message: 'Mã vé không hợp lệ' })
   const booking = await findByCode(code)
   if (!booking) return res.status(404).json({ message: 'Không tìm thấy vé với mã này' })
-  res.json({ result: judge(booking, new Date()), booking })
+  res.json(otherCinema(booking, req.user) ?? { result: judge(booking, new Date()), booking })
 })
 
 // POST /api/admin/tickets/:code/check-in -> xác nhận khách vào rạp, mỗi vé chỉ dùng được một lần
@@ -47,6 +58,8 @@ exports.checkIn = wrap(async (req, res) => {
   if (!CODE_RE.test(code)) return res.status(400).json({ message: 'Mã vé không hợp lệ' })
   const booking = await findByCode(code)
   if (!booking) return res.status(404).json({ message: 'Không tìm thấy vé với mã này' })
+  const refused = otherCinema(booking, req.user)
+  if (refused) return res.status(409).json(refused)
 
   const verdict = judge(booking, new Date())
   if (verdict.status !== 'valid') return res.status(409).json({ result: verdict, booking })

@@ -3,6 +3,7 @@ const Showtime = require('../models/Showtime')
 const Movie = require('../models/Movie')
 const User = require('../models/User')
 const { wrap } = require('../utils/http')
+const { scopeOf, roomIdsOf, showtimeIdsOf } = require('../services/cinemaScope')
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000 // Việt Nam UTC+7, không có giờ mùa hè
@@ -26,7 +27,15 @@ exports.stats = wrap(async (req, res) => {
   const now = new Date()
   // 00:00 (giờ VN) của ngày đầu tiên trong khoảng, ví dụ days=7 là 6 ngày trước cho đến hôm nay
   const from = new Date(Date.parse(`${vnDateKey(now)}T00:00:00${VN_TZ}`) - (days - 1) * DAY_MS)
-  const paidInRange = { paymentStatus: 'paid', paidAt: { $gte: from } }
+  // scope khác null: quản lý rạp, mọi con số chỉ tính trong rạp đó
+  const scope = scopeOf(req.user)
+  const roomIds = scope ? await roomIdsOf(scope) : null
+  const ownBookings = scope ? { showtime: { $in: await showtimeIdsOf(scope) } } : {}
+  const upcoming = { startTime: { $gt: now }, ...(scope && { room: { $in: roomIds } }) }
+  const paidInRange = { ...ownBookings, paymentStatus: 'paid', paidAt: { $gte: from } }
+
+  const countNowShowing = async () =>
+    Movie.countDocuments({ status: 'now_showing', ...(scope && { _id: { $in: await Showtime.distinct('movie', upcoming) } }) })
 
   const [dailyRows, topMovies, statusRows, users, nowShowing, upcomingShowtimes] = await Promise.all([
     Booking.aggregate([
@@ -61,10 +70,10 @@ exports.stats = wrap(async (req, res) => {
         },
       },
     ]),
-    Booking.aggregate([{ $group: { _id: '$paymentStatus', count: { $sum: 1 } } }]),
-    User.countDocuments(),
-    Movie.countDocuments({ status: 'now_showing' }),
-    Showtime.countDocuments({ startTime: { $gt: now } }),
+    Booking.aggregate([{ $match: ownBookings }, { $group: { _id: '$paymentStatus', count: { $sum: 1 } } }]),
+    scope ? undefined : User.countDocuments(), // số người dùng toàn hệ thống chỉ trụ sở được biết
+    countNowShowing(),
+    Showtime.countDocuments(upcoming),
   ])
 
   // Mỗi ngày trong khoảng đều có một dòng (ngày không bán được gì = 0) để biểu đồ liền mạch

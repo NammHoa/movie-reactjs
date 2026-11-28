@@ -2,7 +2,9 @@ const Booking = require('../models/Booking')
 const User = require('../models/User')
 const { isId, wrap } = require('../utils/http')
 
-const ROLES = ['user', 'admin']
+const ROLES = ['user', 'manager', 'admin']
+// Vai trò quản lý không đặt ở đây: chỉ có qua tạo tài khoản chi nhánh hoặc gán rạp (staffController)
+const SETTABLE_ROLES = ['user', 'admin']
 const MAX_LIMIT = 100
 const MAX_QUERY = 50
 const NOT_FOUND = { message: 'Không tìm thấy người dùng' }
@@ -16,7 +18,8 @@ const intParam = (v, fallback, min, max) => {
   return n >= min && n <= max ? n : null
 }
 
-const FIELDS = 'name email phone role createdAt'
+const FIELDS = 'name email phone username role cinema createdAt'
+const CINEMA = { path: 'cinema', select: 'name' }
 
 // Gắn số đơn đã thanh toán và tổng chi tiêu của từng người trong danh sách
 const withStats = async (users) => {
@@ -33,7 +36,7 @@ const withStats = async (users) => {
 }
 
 // GET /api/admin/users?role=admin&q=nam&page=1&limit=20
-// q tìm theo tên, email hoặc số điện thoại. Kèm số lượng theo quyền để hiện trên các tab.
+// q tìm theo tên, email, số điện thoại hoặc tên đăng nhập. Kèm số lượng theo quyền để hiện trên các tab.
 exports.list = wrap(async (req, res) => {
   const { role, q } = req.query
   const page = intParam(req.query.page, 1, 1, 100000)
@@ -51,15 +54,20 @@ exports.list = wrap(async (req, res) => {
   const term = q?.trim()
   if (term) {
     const pattern = escapeRegex(term)
-    filter.$or = [{ name: new RegExp(pattern, 'i') }, { email: new RegExp(pattern, 'i') }, { phone: new RegExp(pattern) }]
+    filter.$or = [
+      { name: new RegExp(pattern, 'i') },
+      { email: new RegExp(pattern, 'i') },
+      { phone: new RegExp(pattern) },
+      { username: new RegExp(pattern, 'i') },
+    ]
   }
 
   const [total, users, byRole] = await Promise.all([
     User.countDocuments(filter),
-    User.find(filter).select(FIELDS).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    User.find(filter).select(FIELDS).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).populate(CINEMA).lean(),
     User.aggregate([{ $group: { _id: '$role', n: { $sum: 1 } } }]),
   ])
-  const counts = { admin: 0, user: 0 }
+  const counts = { admin: 0, manager: 0, user: 0 }
   for (const r of byRole) if (r._id in counts) counts[r._id] = r.n
 
   res.json({
@@ -68,7 +76,7 @@ exports.list = wrap(async (req, res) => {
     limit,
     total,
     pages: Math.ceil(total / limit),
-    counts: { all: counts.admin + counts.user, ...counts },
+    counts: { all: counts.admin + counts.manager + counts.user, ...counts },
   })
 })
 
@@ -76,7 +84,7 @@ exports.list = wrap(async (req, res) => {
 exports.setRole = wrap(async (req, res) => {
   if (!isId(req.params.id)) return res.status(404).json(NOT_FOUND)
   const { role } = req.body ?? {}
-  if (!ROLES.includes(role)) return res.status(400).json({ message: 'Quyền không hợp lệ' })
+  if (!SETTABLE_ROLES.includes(role)) return res.status(400).json({ message: 'Quyền không hợp lệ' })
 
   // Không cho tự đổi quyền của chính mình: admin đang thao tác luôn còn lại, hệ thống không bao giờ hết admin
   if (req.params.id === req.user.id) {
@@ -85,12 +93,15 @@ exports.setRole = wrap(async (req, res) => {
 
   const target = await User.findById(req.params.id).select(FIELDS).lean()
   if (!target) return res.status(404).json(NOT_FOUND)
+  if (role === 'admin' && target.username) {
+    return res.status(409).json({ message: 'Tài khoản chi nhánh không cấp quyền admin được' })
+  }
   if (target.role === role) return res.json({ ...target, unchanged: true })
 
   // Chỉ đổi khi quyền hiện tại vẫn như vừa đọc, tránh ghi đè khi hai admin cùng thao tác
   const updated = await User.findOneAndUpdate(
     { _id: target._id, role: target.role },
-    { role },
+    role === 'user' ? { role, $unset: { cinema: 1 } } : { role },
     { returnDocument: 'after' },
   )
     .select(FIELDS)

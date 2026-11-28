@@ -14,6 +14,7 @@ import {
   SelectField,
 } from '../../components/AuthUI'
 import { errorMessage, formatCountdown, isRateLimited, retryAfterOf } from '../../lib/errors'
+import { homePathFor } from '../../lib/roles'
 import { useCooldown } from '../../lib/useCooldown'
 import { useGeo } from '../../lib/useGeo'
 import { PASSWORD_RULES, PHONE_RE, EMAIL_RE, isPasswordValid, normalizePhone, parseIdentifier } from '../../lib/validators'
@@ -66,7 +67,7 @@ export default function Auth() {
     // Quay lại trang đang xem dở (vd. trang chọn ghế) nếu có, chỉ nhận đường dẫn nội bộ
     const from = location.state?.from
     const back = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : null
-    navigate(back ?? (data.user.role === 'admin' ? '/admin' : '/'))
+    navigate(back ?? homePathFor(data.user))
   }
 
   // Bị giới hạn thì hiện đếm ngược và khóa nút gửi cho đến khi hết thời gian chờ; lỗi khác hiện câu của server
@@ -79,11 +80,11 @@ export default function Auth() {
     }
   }
 
-  // ---- Bước 1: nhập SĐT / Email ----
+  // ---- Bước 1: nhập SĐT / email / tên đăng nhập ----
   const submitIdentify = async (e) => {
     e.preventDefault()
     const parsed = parseIdentifier(identifier)
-    if (!parsed) return setErrors({ identifier: 'Vui lòng nhập số điện thoại hoặc email hợp lệ' })
+    if (!parsed) return setErrors({ identifier: 'Vui lòng nhập số điện thoại, email hoặc tên đăng nhập hợp lệ' })
 
     setLoading(true)
     setFormError('')
@@ -93,6 +94,9 @@ export default function Auth() {
       if (data.exists) {
         setPassword('')
         goto('login')
+      } else if (parsed.type === 'username') {
+        // Tên đăng nhập chỉ do trụ sở tạo, không đăng ký được từ đây
+        setErrors({ identifier: 'Không tìm thấy tài khoản này. Khách hàng đăng nhập bằng số điện thoại hoặc email.' })
       } else {
         setReg({
           ...emptyReg,
@@ -172,7 +176,7 @@ export default function Auth() {
           </h1>
           <p className="text-base">Vui lòng đăng nhập để nhận nhiều ưu đãi</p>
           <Field
-            label="Số điện thoại / Email"
+            label="Số điện thoại / Email / Tên đăng nhập"
             value={identifier}
             onChange={(e) => {
               setIdentifier(e.target.value)
@@ -180,6 +184,7 @@ export default function Auth() {
             }}
             error={errors.identifier}
             autoComplete="username"
+            autoCapitalize="none"
             autoFocus
           />
           <FormError message={formError} />

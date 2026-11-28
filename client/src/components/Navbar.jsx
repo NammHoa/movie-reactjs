@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MENU, activeMenu } from '../lib/menu'
+import { isStaff } from '../lib/roles'
 import MobileMenu from './MobileMenu'
 
 const accountItem = 'px-3 py-2.5 uppercase first:pl-0 last:pr-0 hover:text-brand'
@@ -19,7 +20,7 @@ export default function Navbar() {
         </Link>
 
         <nav aria-label="Tài khoản" className="hidden min-w-0 items-center divide-x divide-gray-300 whitespace-nowrap text-xs font-semibold lg:flex">
-          {user?.role === 'admin' && (
+          {isStaff(user) && (
             <Link to="/admin" className={accountItem}>Quản trị</Link>
           )}
           {user ? (

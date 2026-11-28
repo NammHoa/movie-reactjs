@@ -75,7 +75,8 @@ function InfoForm({ profile, onSaved }) {
     e.preventDefault()
     const next = {}
     if (!normalized.name) next.name = 'Vui lòng nhập họ tên'
-    if (!PHONE_RE.test(normalized.phone)) next.phone = 'Số điện thoại không hợp lệ'
+    // Tài khoản chi nhánh không có số điện thoại: chỉ kiểm tra khi ô có chữ hoặc trước đó đã có số
+    if ((normalized.phone || base.phone) && !PHONE_RE.test(normalized.phone)) next.phone = 'Số điện thoại không hợp lệ'
     if ('dob' in changes && (!normalized.dob || normalized.dob > todayStr())) next.dob = 'Ngày sinh không hợp lệ'
     setErrors(next)
     if (Object.keys(next).length || !dirty) return

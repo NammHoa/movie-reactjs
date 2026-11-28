@@ -15,6 +15,7 @@ const BANNERS = {
   ended: { cls: 'bg-red-600', icon: '✕', title: 'SUẤT CHIẾU ĐÃ KẾT THÚC' },
   too_early: { cls: 'bg-amber-500', icon: '!', title: 'CHƯA ĐẾN GIỜ VÀO RẠP' },
   notfound: { cls: 'bg-red-600', icon: '?', title: 'KHÔNG TÌM THẤY VÉ' },
+  other_cinema: { cls: 'bg-red-600', icon: '✕', title: 'VÉ CỦA RẠP KHÁC' },
 }
 
 function Detail({ label, children }) {
