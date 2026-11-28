@@ -2,7 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import RateLimitToast from './components/RateLimitToast'
 import ScrollToTop from './components/ScrollToTop'
-import { AdminRoute, ProtectedRoute } from './routes/ProtectedRoute'
+import { AdminRoute, HqRoute, ProtectedRoute } from './routes/ProtectedRoute'
 import Home from './pages/user/Home'
 import Auth from './pages/user/Auth'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -99,13 +99,13 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="checkin" element={<Checkin />} />
-          <Route path="users" element={<Users />} />
-          <Route path="movies" element={<Movies />} />
-          <Route path="cinemas" element={<Cinemas />} />
           <Route path="showtimes" element={<Showtimes />} />
-          <Route path="coupons" element={<Coupons />} />
-          <Route path="refunds" element={<Refunds />} />
-          <Route path="banners" element={<Banners />} />
+          <Route path="users" element={<HqRoute><Users /></HqRoute>} />
+          <Route path="movies" element={<HqRoute><Movies /></HqRoute>} />
+          <Route path="cinemas" element={<HqRoute><Cinemas /></HqRoute>} />
+          <Route path="coupons" element={<HqRoute><Coupons /></HqRoute>} />
+          <Route path="refunds" element={<HqRoute><Refunds /></HqRoute>} />
+          <Route path="banners" element={<HqRoute><Banners /></HqRoute>} />
         </Route>
       </Routes>
     </>

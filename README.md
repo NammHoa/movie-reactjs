@@ -1,6 +1,6 @@
 # Denim Cinema
 
-Website đặt vé xem phim đầy đủ luồng thật: chọn phim hoặc rạp, chọn ghế, giảm giá, thanh toán qua cổng VNPay (sandbox), nhận vé điện tử có mã QR qua email, soát vé tại rạp, hủy vé và hoàn tiền. Có khu vực quản trị riêng cho admin.
+Website đặt vé xem phim đầy đủ luồng thật: chọn phim hoặc rạp, chọn ghế, giảm giá, thanh toán qua cổng VNPay (sandbox), nhận vé điện tử có mã QR qua email, soát vé tại rạp, hủy vé và hoàn tiền. Có khu vực quản trị cho trụ sở (admin) và cho quản lý từng rạp.
 
 Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Render và MongoDB Atlas.
 
@@ -11,7 +11,7 @@ Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Re
 ## Tính năng
 
 **Khách hàng**
-- Đăng ký, đăng nhập bằng số điện thoại hoặc email; phiên đăng nhập tự gia hạn (access token ngắn hạn + refresh token xoay vòng).
+- Đăng ký, đăng nhập bằng số điện thoại hoặc email (tài khoản chi nhánh đăng nhập bằng tên đăng nhập); phiên đăng nhập tự gia hạn (access token ngắn hạn + refresh token xoay vòng).
 - Trang chủ: banner phim nổi bật (khách tự bấm hoặc vuốt, không tự trượt), bảng Box Office 7 phim bán nhiều vé nhất trong 7 ngày gần nhất, hàng poster phim đang chiếu (rê chuột hoặc chạm vào poster để đặt vé hay xem chi tiết).
 - Menu 7 mục (điện thoại và máy tính bảng dùng nút ba gạch). Tin mới & Ưu đãi, Shop, De Coin, Quảng cáo & Thuê rạp đang được phát triển.
 - Movie Talk: banner phim nổi bật tự trượt (có nút tạm dừng), hai tab phim đang chiếu (đánh số theo Box Office) và sắp chiếu.
@@ -25,7 +25,12 @@ Xây dựng bằng **React + Express + MongoDB**, chạy thật trên Vercel, Re
 - Tự hủy vé đã thanh toán trước giờ chiếu và nhận hoàn tiền; theo dõi trạng thái hoàn tiền.
 - Hồ sơ cá nhân, đổi mật khẩu.
 
-**Quản trị (admin)**
+**Quản lý rạp (chi nhánh)**
+- Trụ sở tạo tài khoản chi nhánh ở trang Người dùng (tên đăng nhập, email liên hệ, rạp, mật khẩu tạm), đổi rạp, gỡ hoặc cấp lại quyền, đặt lại mật khẩu.
+- Chỉ làm việc với rạp của mình, server chặn ở từng API: tổng quan doanh thu, đơn đặt vé (xem, hủy đơn chưa thanh toán), soát vé, suất chiếu. Hoàn tiền chỉ xem trạng thái. Quét vé rạp khác chỉ báo vé thuộc rạp nào.
+- Phim, banner, mã giảm giá, rạp, phòng, người dùng và hoàn tiền chỉ trụ sở làm được.
+
+**Quản trị trụ sở (admin)**
 - Tổng quan: doanh thu theo ngày, số vé, phim bán chạy, tình trạng đơn.
 - Quản lý phim, rạp, phòng chiếu, suất chiếu (chặn trùng lịch trong cùng phòng), mã giảm giá, người dùng và phân quyền.
 - Đơn đặt vé: tìm kiếm, lọc, xem lịch sử thanh toán, hủy đơn chưa thanh toán, hủy và hoàn tiền đơn đã thanh toán.
@@ -150,7 +155,7 @@ Giao diện (`client/.env`): chỉ cần `VITE_API_URL` khi deploy (địa chỉ
 
 ## API tóm tắt
 
-Tất cả nằm dưới `/api`. Quyền: công khai, đăng nhập, hoặc admin.
+Tất cả nằm dưới `/api`. Quyền: công khai, đăng nhập, nhân viên (admin hoặc quản lý rạp, quản lý chỉ trong rạp của mình), hoặc admin.
 
 | Nhóm | Đường dẫn chính |
 |---|---|
@@ -160,10 +165,11 @@ Tất cả nằm dưới `/api`. Quyền: công khai, đăng nhập, hoặc admi
 | Đánh giá | `GET /movies/:id/reviews/me`, `PUT /movies/:id/reviews`, `DELETE /reviews/:id` |
 | Banner trang chủ | `GET /banners`; quản lý (admin): `GET, POST /admin/banners`, `PUT /admin/banners/order`, `DELETE /admin/banners/:movieId` |
 | Rạp, phòng | `GET /cinemas` (kèm `?withUpcoming=1`), `GET /cinemas/:id/schedule?date=`, `GET /rooms`; thêm, sửa, xóa (admin) |
-| Suất chiếu | `GET /showtimes`, `/showtimes/:id`, `/showtimes/:id/seats`; thêm, sửa, xóa (admin) |
+| Suất chiếu | `GET /showtimes`, `/showtimes/:id`, `/showtimes/:id/seats`; thêm, sửa, xóa (nhân viên) |
 | Đặt vé | `POST /bookings`, `/bookings/quote`; `GET /bookings/mine`, `/bookings/:id`; `POST /bookings/:id/cancel`, `/refund`, `/email` |
 | Thanh toán | `POST /payments`; `GET /payments/:id`; `GET /payments/vnpay/return`, `/vnpay/ipn` |
-| Quản trị | `/admin/stats`, `/admin/bookings`, `/admin/users`, `/admin/coupons`, `/admin/refunds`, `/admin/tickets/:code` (xem, soát vé) |
+| Quản trị | Nhân viên: `/admin/stats`, `/admin/bookings` (xem, hủy đơn chưa thanh toán), `/admin/tickets/:code` (xem, soát vé). Admin: `/admin/bookings/:id/refund`, `/admin/users`, `/admin/coupons`, `/admin/refunds` |
+| Tài khoản chi nhánh (admin) | `POST /admin/users/managers`, `PATCH /admin/users/:id/manager`, `POST /admin/users/:id/password` |
 | Nội bộ | `POST /internal/reminders` (cần `CRON_SECRET`) |
 
 ## Triển khai (Atlas + Render + Vercel)

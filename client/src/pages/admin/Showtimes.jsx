@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../api/axios'
+import { useAuth } from '../../context/AuthContext'
 import { formatDateTime, formatPrice, toLocalInput } from '../../lib/movie'
 import { ErrorText, FormModal, PageHeader, Row, inputCls, primaryBtn } from './ui'
 
-function ShowtimeForm({ item, movies, cinemas, rooms, onClose, onSaved }) {
+// ownCinema: id rạp của quản lý (rỗng với trụ sở); có giá trị thì ô rạp bị khóa vào rạp đó
+function ShowtimeForm({ item, movies, cinemas, rooms, ownCinema, onClose, onSaved }) {
   const [form, setForm] = useState({
     movie: item?.movie?._id ?? '',
-    cinema: item?.room?.cinema?._id ?? '',
+    cinema: item?.room?.cinema?._id ?? ownCinema,
     room: item?.room?._id ?? '',
     startTime: item ? toLocalInput(item.startTime) : '',
     price: item?.price ?? 90000,
@@ -53,6 +55,7 @@ function ShowtimeForm({ item, movies, cinemas, rooms, onClose, onSaved }) {
             className={inputCls}
             value={form.cinema}
             onChange={(e) => setForm((f) => ({ ...f, cinema: e.target.value, room: '' }))}
+            disabled={!!ownCinema}
             required
           >
             <option value="">— Chọn rạp —</option>
@@ -89,6 +92,8 @@ function ShowtimeForm({ item, movies, cinemas, rooms, onClose, onSaved }) {
 }
 
 export default function Showtimes() {
+  const { user } = useAuth()
+  const ownCinema = user.role === 'manager' ? (user.cinema?._id ?? '') : ''
   const [showtimes, setShowtimes] = useState([])
   const [movies, setMovies] = useState([])
   const [cinemas, setCinemas] = useState([])
@@ -102,6 +107,7 @@ export default function Showtimes() {
   const load = useCallback(async () => {
     try {
       const params = {}
+      if (ownCinema) params.cinema = ownCinema
       if (movieFilter) params.movie = movieFilter
       if (includePast) params.includePast = 1
       const { data } = await api.get('/showtimes', { params })
@@ -112,7 +118,7 @@ export default function Showtimes() {
     } finally {
       setLoading(false)
     }
-  }, [movieFilter, includePast])
+  }, [movieFilter, includePast, ownCinema])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -140,7 +146,8 @@ export default function Showtimes() {
     }
   }
 
-  const missing = movies.length === 0 || rooms.length === 0
+  const ownRooms = ownCinema ? rooms.filter((r) => r.cinema?._id === ownCinema) : rooms
+  const missing = movies.length === 0 || ownRooms.length === 0
 
   return (
     <div>
@@ -155,7 +162,9 @@ export default function Showtimes() {
       <ErrorText message={error} />
       {missing && !loading && (
         <p className="mb-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          Cần tạo ít nhất một phim (mục Quản lý phim) và một phòng chiếu (mục Rạp & phòng) trước khi thêm suất chiếu.
+          {ownCinema
+            ? 'Chưa thêm được suất chiếu: hệ thống cần có phim và rạp của bạn cần có phòng chiếu. Hãy liên hệ trụ sở.'
+            : 'Cần tạo ít nhất một phim (mục Quản lý phim) và một phòng chiếu (mục Rạp & phòng) trước khi thêm suất chiếu.'}
         </p>
       )}
 
@@ -230,6 +239,7 @@ export default function Showtimes() {
           movies={movies}
           cinemas={cinemas}
           rooms={rooms}
+          ownCinema={ownCinema}
           onClose={() => setEditing(undefined)}
           onSaved={() => {
             setEditing(undefined)

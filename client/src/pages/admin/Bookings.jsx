@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../../api/axios'
+import { useAuth } from '../../context/AuthContext'
 import { errorMessage } from '../../lib/errors'
 import { formatDateTime, formatPrice } from '../../lib/movie'
 import RefundPanel from './RefundPanel'
@@ -46,6 +47,8 @@ function Info({ label, children }) {
 }
 
 function DetailModal({ item, onClose, onChanged }) {
+  const { user } = useAuth()
+  const hq = user.role === 'admin' // hoàn tiền chỉ trụ sở làm được
   const [detail, setDetail] = useState({ id: null, data: null })
   const [tick, setTick] = useState(0)
   const [cancelling, setCancelling] = useState(false)
@@ -154,7 +157,14 @@ function DetailModal({ item, onClose, onChanged }) {
         {loaded && detail.data?.refund && (
           <div className="mt-5 border-t pt-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Hoàn tiền</p>
-            <RefundPanel refund={detail.data.refund} onChanged={() => { setTick((t) => t + 1); onChanged() }} />
+            {hq ? (
+              <RefundPanel refund={detail.data.refund} onChanged={() => { setTick((t) => t + 1); onChanged() }} />
+            ) : (
+              <p className="flex items-center justify-between gap-2 rounded bg-gray-50 px-3 py-2 text-sm">
+                <span className="font-semibold">{detail.data.refund.status === 'success' ? 'Đã hoàn' : 'Đang xử lý'}</span>
+                <span>{formatPrice(detail.data.refund.amount)}</span>
+              </p>
+            )}
           </div>
         )}
 
@@ -167,13 +177,14 @@ function DetailModal({ item, onClose, onChanged }) {
               {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
             </button>
           )}
-          {b.paymentStatus === 'paid' && !b.checkedInAt && (
+          {hq && b.paymentStatus === 'paid' && !b.checkedInAt && (
             <button onClick={refund} disabled={cancelling} className="h-10 rounded bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60">
               {cancelling ? 'Đang hủy...' : 'Hủy vé & hoàn tiền'}
             </button>
           )}
         </div>
-        {b.paymentStatus === 'paid' && b.checkedInAt && <p className="mt-3 text-xs text-gray-400">Vé đã được sử dụng nên không hoàn tiền được.</p>}
+        {hq && b.paymentStatus === 'paid' && b.checkedInAt && <p className="mt-3 text-xs text-gray-400">Vé đã được sử dụng nên không hoàn tiền được.</p>}
+        {!hq && b.paymentStatus === 'paid' && <p className="mt-3 text-xs text-gray-400">Cần hủy vé đã thanh toán thì liên hệ trụ sở.</p>}
       </div>
     </div>
   )

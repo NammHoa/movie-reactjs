@@ -1,25 +1,18 @@
 import { NavLink, Outlet } from 'react-router-dom'
-
-const LINKS = [
-  { to: '/admin', label: 'Tổng quan', end: true },
-  { to: '/admin/bookings', label: 'Đơn đặt vé' },
-  { to: '/admin/checkin', label: 'Soát vé' },
-  { to: '/admin/refunds', label: 'Hoàn tiền' },
-  { to: '/admin/users', label: 'Người dùng' },
-  { to: '/admin/movies', label: 'Quản lý phim' },
-  { to: '/admin/banners', label: 'Banner' },
-  { to: '/admin/cinemas', label: 'Rạp & phòng chiếu' },
-  { to: '/admin/showtimes', label: 'Suất chiếu' },
-  { to: '/admin/coupons', label: 'Mã giảm giá' },
-]
+import { useAuth } from '../../context/AuthContext'
+import { adminLinks } from '../../lib/roles'
 
 export default function AdminLayout() {
+  const { user } = useAuth()
+  const manager = user.role === 'manager'
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:flex-row">
       <aside className="md:w-52 md:shrink-0">
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Quản trị</p>
-        <nav className="flex flex-wrap gap-2 md:flex-col md:flex-nowrap">
-          {LINKS.map((l) => (
+        <p className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-400">{manager ? 'Quản lý rạp' : 'Quản trị'}</p>
+        {manager && <p className="break-words font-bold text-gray-900">{user.cinema?.name}</p>}
+        <nav className="mt-2 flex flex-wrap gap-2 md:flex-col md:flex-nowrap">
+          {adminLinks(user.role).map((l) => (
             <NavLink
               key={l.to}
               to={l.to}

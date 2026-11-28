@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { MENU } from '../lib/menu'
+import { isStaff } from '../lib/roles'
 
 const rowCls = 'flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-4 py-2 text-sm font-semibold uppercase'
 const authBtn = 'flex h-11 flex-1 items-center justify-center rounded border border-brand text-sm font-bold uppercase'
@@ -90,7 +91,7 @@ export default function MobileMenu({ user, onLogout, active }) {
             {user ? (
               <>
                 <p className="truncate px-4 pb-1 pt-3 text-sm text-gray-500">Xin chào, {user.name}</p>
-                {user.role === 'admin' && <Link to="/admin" className={rowCls}>Quản trị</Link>}
+                {isStaff(user) && <Link to="/admin" className={rowCls}>Quản trị</Link>}
                 <Link to="/my-tickets" className={rowCls}>Vé của tôi</Link>
                 <Link to="/profile" className={rowCls}>Hồ sơ</Link>
                 <button type="button" onClick={logout} className={`${rowCls} cursor-pointer text-left text-brand`}>
